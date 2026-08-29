@@ -77,6 +77,7 @@ class SkillLoop:
         skill_files: Callable[[], dict[str, str]] | None = None,
         minted_from: str = "research",
         amendment: dict | None = None,
+        signature: dict | None = None,
         max_depth: int = MAX_RESEARCH_DEPTH,
     ) -> None:
         self.registry = registry
@@ -88,6 +89,7 @@ class SkillLoop:
         self.skill_files = skill_files
         self.minted_from = minted_from
         self.amendment = amendment
+        self.signature = signature
         self.max_depth = max_depth
 
     def run_step(self, task: Task, depth: int = 0) -> StepResult:
@@ -113,6 +115,7 @@ class SkillLoop:
                     extra_files=self.skill_files() if self.skill_files else None,
                     minted_from=self.minted_from,
                     amendment=self.amendment,
+                    signature=self.signature,
                 )
                 result.minted = True
             except UngroundedSkillError as exc:

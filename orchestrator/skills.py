@@ -65,6 +65,9 @@ class SkillSpec:
     fixture: str | None = None
     # Step 1b: what prompted an amend, recorded on the skill rather than in a commit.
     amendment: dict | None = None
+    # Declared, not inferred. A signature parsed out of prose is a guess about
+    # what a skill is for, and a guess is what retrieval is meant to replace.
+    signature: dict | None = None
 
     def detect_gap(self, task: Task) -> MethodGap | None:
         if self.trigger in task.description:
@@ -164,6 +167,11 @@ SITE_INTERPRETATION = SkillSpec(
         "A pass means structural extraction survived a reordering that defeats a "
         "position-based reader."
     ),
+    signature={
+        "task_type": "extract structured facts from a rendered web page",
+        "inputs": ["html page", "target field names"],
+        "outputs": ["structured record", "extraction failure"],
+    },
 )
 
 ENTITY_LINKING = SkillSpec(
@@ -198,6 +206,11 @@ ENTITY_LINKING = SkillSpec(
         "A pass means a single low-confidence link did not merge two groups that share "
         "nothing, which naive transitive closure does."
     ),
+    signature={
+        "task_type": "decide which records across sources describe the same entity",
+        "inputs": ["records", "pairwise match scores", "blocking key"],
+        "outputs": ["entity clusters", "declined links with confidence"],
+    },
 )
 
 WORKSPACE_SENTINEL = SkillSpec(
@@ -239,6 +252,11 @@ WORKSPACE_SENTINEL = SkillSpec(
         "differs from the naive one."
     ),
     minted_from="incident",
+    signature={
+        "task_type": "watch a peer agent and report state to an operator",
+        "inputs": ["inbound channel", "peer liveness signal", "elapsed time"],
+        "outputs": ["escalation", "duration update", "silence"],
+    },
 )
 
 OBSERVATION_BUDGETING = SkillSpec(
@@ -273,6 +291,11 @@ OBSERVATION_BUDGETING = SkillSpec(
         "from a live retrieval, so a person should read the cited papers before relying on "
         "one."
     ),
+    signature={
+        "task_type": "decide how much of an observation a running agent carries",
+        "inputs": ["observation", "model context budget", "planning horizon"],
+        "outputs": ["reduced observation", "dropped content"],
+    },
 )
 
 ALL_SKILLS = (SITE_INTERPRETATION, ENTITY_LINKING, WORKSPACE_SENTINEL, OBSERVATION_BUDGETING)

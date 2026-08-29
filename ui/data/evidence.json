@@ -1,0 +1,242 @@
+{
+  "generated_from": "registry + ui/data/events.jsonl",
+  "schema": {
+    "x": "mean retrieval score when this rule's skill was consulted; null if never consulted. Retrieval ranks SKILLS, not rules, so every rule of a consulted skill inherits that skill's score. Do not read per-rule precision into it: two rules of one skill are indistinguishable on this axis today.",
+    "y": "exercise pass rate for the owning skill; null if never exercised",
+    "size": "consultation count; null if never consulted",
+    "null_means": "no observation exists. Render at a neutral gutter position, not at zero. Zero is an observation that something scored nothing; null is the absence of any observation, and conflating them turns a sparse map into a confident wrong one."
+  },
+  "counts": {
+    "rules": 16,
+    "rules_with_retrieval_observations": 16,
+    "rules_without": 0,
+    "events_read": 229
+  },
+  "rules": [
+    {
+      "rule_id": "agent-observation-budgeting#1",
+      "skill": "agent-observation-budgeting",
+      "text": "Adaptively select the observation representation from the model's capability and its thinking token budget, rather than fixing one representation for every model and every step. [read-more-think-more]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0446,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "read-more-think-more"
+      ]
+    },
+    {
+      "rule_id": "agent-observation-budgeting#2",
+      "skill": "agent-observation-budgeting",
+      "text": "Retrieve only the lines the current plan needs, judged against the planning horizon rather than against the page. Reducing by relevance to the page drops lines the planner still required. [lineretriever-planning-aware-observation]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0446,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "lineretriever-planning-aware-observation"
+      ]
+    },
+    {
+      "rule_id": "competitor-site-interpretation#1",
+      "skill": "competitor-site-interpretation",
+      "text": "Do not assume the human-facing rendering is the agent-facing interface. Target the page's semantic structure directly rather than reproducing what a human reader sees. [web-for-agents]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.0813,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "web-for-agents"
+      ]
+    },
+    {
+      "rule_id": "competitor-site-interpretation#2",
+      "skill": "competitor-site-interpretation",
+      "text": "Raw DOM is impractical at realistic page sizes, where deeply nested containers, styling hooks and decorative elements obscure semantic structure. Downsample to the semantic skeleton before extraction rather than parsing raw HTML. Independently prescribed for a second reason: Downsample HTML observations using extractive methods with domain-specific optimization to reduce agent latency while maintaining performance. Objectives this rule answers to: extraction fidelity: keep the semantic structure legible (dom-downsampling); cost: bound observation size and latency (revisiting-observation-reduction-for). [dom-downsampling] [revisiting-observation-reduction-for]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.0813,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "dom-downsampling",
+        "revisiting-observation-reduction-for"
+      ]
+    },
+    {
+      "rule_id": "competitor-site-interpretation#3",
+      "skill": "competitor-site-interpretation",
+      "text": "Screenshots omit content that is occluded, unrendered or hidden behind interaction. Do not treat visual salience as a proxy for presence; confirm against a structural representation. [webvoyager]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.0813,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "webvoyager"
+      ]
+    },
+    {
+      "rule_id": "public-source-entity-linking#1",
+      "skill": "public-source-entity-linking",
+      "text": "Do not take transitive closure over pairwise matches. One false positive chains records that share nothing into a single cluster, and the error compounds rather than averaging out. Require a verified merge step before joining clusters. [transitive-closure-collapse]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.053,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "transitive-closure-collapse"
+      ]
+    },
+    {
+      "rule_id": "public-source-entity-linking#2",
+      "skill": "public-source-entity-linking",
+      "text": "Carry linkage uncertainty into the downstream conclusion rather than collapsing matches to boolean edges. A graph built from hard edges reports a confidence it never earned. [linkage-uncertainty]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.053,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "linkage-uncertainty"
+      ]
+    },
+    {
+      "rule_id": "public-source-entity-linking#3",
+      "skill": "public-source-entity-linking",
+      "text": "Block candidates on a cheap key before pairwise comparison, so comparison cost stays tractable and unrelated records are never compared in the first place. [blocking-before-comparison]",
+      "provenance": "research",
+      "trusted": true,
+      "version": 4,
+      "x": 0.053,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "blocking-before-comparison"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#1",
+      "skill": "workspace-sentinel",
+      "text": "Read the inbound channel before doing anything else on a tick. A coordination agent that writes status outward while never reading inbound has wired half a channel and will report itself healthy while directives sit unread. [channel-read-first]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "channel-read-first"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#2",
+      "skill": "workspace-sentinel",
+      "text": "Acknowledge an inbound message the moment it is seen, before processing it. Silence between arrival and completed work is indistinguishable from not having received it. [receipt-before-processing]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "receipt-before-processing"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#3",
+      "skill": "workspace-sentinel",
+      "text": "A delivery receipt is not application. Track directives to the observable effect they were supposed to cause, and treat acknowledged-but-not-applied as still open. [acknowledged-not-applied]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "acknowledged-not-applied"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#4",
+      "skill": "workspace-sentinel",
+      "text": "Escalate on new information, not on a timer alone. Re-sending identical content because a threshold elapsed again is noise, and it trains the recipient to ignore the channel. Send a duration update instead of a repeat. [watchdog-on-new-information]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "watchdog-on-new-information"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#5",
+      "skill": "workspace-sentinel",
+      "text": "Distinguish a signal that is absent from a signal that is negative. An unavailable liveness probe is missing evidence, not evidence of failure, and must not be reported as one. [absent-signal-is-not-evidence]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "absent-signal-is-not-evidence"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#6",
+      "skill": "workspace-sentinel",
+      "text": "Verify a claim against the underlying artefact before relaying it. A case-insensitive pattern matched a lowercase commit hash and would have been reported as a boundary violation had it been passed on unchecked. [verify-before-relaying]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "verify-before-relaying"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#7",
+      "skill": "workspace-sentinel",
+      "text": "Never confirm what cannot be evidenced, and state the strength of the evidence alongside the claim. Where a conclusion survives but its basis was overstated, correct the basis rather than leaving the conclusion propped on it. [never-confirm-without-evidence]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "never-confirm-without-evidence"
+      ]
+    },
+    {
+      "rule_id": "workspace-sentinel#8",
+      "skill": "workspace-sentinel",
+      "text": "Flagging once and then holding is not escalation. Escalate a blocked decision with a stated default at 15 minutes, and apply the default at 30 unless the action is irreversible or external-facing, which waits indefinitely. [escalate-then-default]",
+      "provenance": "incident",
+      "trusted": true,
+      "version": 1,
+      "x": 0.0426,
+      "y": 1.0,
+      "size": 53,
+      "citations": [
+        "escalate-then-default"
+      ]
+    }
+  ]
+}
