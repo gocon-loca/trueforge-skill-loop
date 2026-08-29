@@ -15,8 +15,22 @@ Run through this before every push. It is short on purpose.
 Quick scan:
 
 ```sh
+# credentials and local paths: case-insensitive is fine, these all contain characters
+# that do not occur in hex
 git diff --cached | grep -nEi 'sk-|gh[pous]_|xox[baprs]-|AKIA|BEGIN [A-Z ]*PRIVATE KEY|/Users/'
+
+# channel and workspace identifiers: case-SENSITIVE, deliberately
+git diff --cached | grep -nE 'C0[A-Z0-9]{8}|T0[A-Z0-9]{8}'
 ```
+
+The second scan must not take `-i`. A channel id is uppercase by construction, and
+`C0[A-Z0-9]{8}` matched case-insensitively will hit any lowercase hex string containing `c0`
+followed by eight hex characters. This repository stores content hashes in `meta.yaml`, so
+that is not a rare coincidence: it has already produced two false boundary violations in two
+independently written scanners, once on a commit hash and once on an `exercised_hash`.
+
+A scan that cries wolf gets ignored, which is worse than not scanning, because the next
+finding is real.
 
 ## Pull requests
 

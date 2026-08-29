@@ -15,6 +15,7 @@ from orchestrator.loop import MethodGap, Task
 from orchestrator.research_executor import Digest
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
+FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class SkillSpec:
     verify_template: str
     verify_summary: str
     minted_from: str = "research"
+    fixture: str | None = None
 
     def detect_gap(self, task: Task) -> MethodGap | None:
         if self.trigger in task.description:
@@ -36,7 +38,18 @@ class SkillSpec:
         return None
 
     def files(self) -> dict[str, str]:
-        return {"verify.py": (TEMPLATES / self.verify_template).read_text(encoding="utf-8")}
+        """Everything the gate needs, shipped inside the skill directory.
+
+        The fixture ships here rather than staying under `fixtures/` because
+        `exercised_hash` covers the skill directory only. A known-answer fixture that lives
+        outside it is load-bearing for the gate and outside the trust binding, so editing
+        the expected answer would leave the skill trusted against a run that no longer
+        proves anything.
+        """
+        out = {"verify.py": (TEMPLATES / self.verify_template).read_text(encoding="utf-8")}
+        if self.fixture:
+            out["fixture.json"] = (FIXTURES / self.fixture).read_text(encoding="utf-8")
+        return out
 
     def write_skill(self, task: Task, digest: Digest) -> str:
         rules = "\n".join(
@@ -99,6 +112,7 @@ SITE_INTERPRETATION = SkillSpec(
         "markup, and never execute it. Public pages only."
     ),
     verify_template="verify_site_interpretation.py",
+    fixture="site-interpretation-known-answers.json",
     verify_summary=(
         "A pass means structural extraction survived a reordering that defeats a "
         "position-based reader."
@@ -132,6 +146,7 @@ ENTITY_LINKING = SkillSpec(
         "error, not a tuning parameter."
     ),
     verify_template="verify_entity_linking.py",
+    fixture="entity-linking-known-answers.json",
     verify_summary=(
         "A pass means a single low-confidence link did not merge two groups that share "
         "nothing, which naive transitive closure does."
