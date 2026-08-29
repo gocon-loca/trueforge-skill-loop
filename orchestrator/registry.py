@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import tempfile
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
@@ -25,7 +26,43 @@ import yaml
 from orchestrator.research_executor import Digest
 
 NAME_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+VERIFICATION_BLOCK = re.compile(
+    r"^##\s+Verification\s*$.*?^```[a-zA-Z]*\s*$(?P<body>.*?)^```\s*$",
+    re.MULTILINE | re.DOTALL,
+)
+ALLOWED_VERIFIERS = frozenset({"make", "python3", "python", "pytest", "unittest"})
 RESERVED_NAMES = frozenset({"_template"})
+
+
+def validate_trust_state(meta: "SkillMeta") -> None:
+    """Reject trust records that contradict themselves.
+
+    A hand-edited meta.yaml is not preventable in a git-backed registry, and this does not
+    claim to prevent it. What it does is make an inconsistent record fail closed at read
+    time, so the cheap version of forging trust does not survive a load, and the expensive
+    version still shows up as a reviewable diff.
+    """
+    if meta.exercised and not (meta.exercised_at and meta.exercised_by):
+        raise InvalidTrustStateError(
+            f"skill {meta.name!r} is marked exercised but carries no evidence "
+            f"(exercised_at={meta.exercised_at!r}, exercised_by={meta.exercised_by!r}); "
+            f"a trust record without evidence is not auditable"
+        )
+    if not meta.exercised and (meta.exercised_at or meta.exercised_by):
+        raise InvalidTrustStateError(
+            f"skill {meta.name!r} is not exercised but carries exercise evidence; "
+            f"trust was revoked without clearing the record"
+        )
+    if meta.version < 1:
+        raise InvalidTrustStateError(f"skill {meta.name!r} has non-positive version {meta.version}")
+    if meta.minted_from not in {"research", "manual"}:
+        raise InvalidTrustStateError(
+            f"skill {meta.name!r} has unknown minted_from {meta.minted_from!r}"
+        )
+    if meta.minted_from == "research" and meta.citations < 1:
+        raise InvalidTrustStateError(
+            f"skill {meta.name!r} claims research provenance but cites nothing"
+        )
 
 
 class RegistryError(Exception):
@@ -34,6 +71,10 @@ class RegistryError(Exception):
 
 class UntrustedSkillError(RegistryError):
     """Raised when work is attempted with a skill that has not passed the exercise gate."""
+
+
+class InvalidTrustStateError(RegistryError):
+    """Raised when a meta.yaml trust record contradicts itself."""
 
 
 class UngroundedSkillError(RegistryError):
@@ -119,7 +160,41 @@ class Registry:
         meta_path = self.path_for(name) / "meta.yaml"
         if not meta_path.is_file():
             raise RegistryError(f"no skill named {name!r} in {self.root}")
-        return SkillMeta.from_mapping(yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {})
+        meta = SkillMeta.from_mapping(yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {})
+        validate_trust_state(meta)
+        return meta
+
+    def read_verification_command(self, name: str) -> tuple[str, ...]:
+        """The command the skill itself declares as its passing run.
+
+        Read from the first fenced block under `## Verification` in SKILL.md, so each skill
+        is verified by its own check rather than by one hardcoded command.
+
+        The body of a minted skill derives from a research digest, which is untrusted input,
+        so this is a command-injection surface. It is handled by never using a shell: the
+        command is parsed with shlex and the executable must be on ALLOWED_VERIFIERS. A
+        skill cannot introduce a new executable by writing one into its own SKILL.md.
+        """
+        skill_md = self.path_for(name) / "SKILL.md"
+        if not skill_md.is_file():
+            raise RegistryError(f"skill {name!r} has no SKILL.md")
+
+        match = VERIFICATION_BLOCK.search(skill_md.read_text(encoding="utf-8"))
+        if not match:
+            raise RegistryError(
+                f"skill {name!r} declares no verification command; a skill without a "
+                f"checkable verification step cannot be exercised, and so cannot be trusted"
+            )
+
+        parts = tuple(shlex.split(match.group("body").strip()))
+        if not parts:
+            raise RegistryError(f"skill {name!r} declares an empty verification command")
+        if parts[0] not in ALLOWED_VERIFIERS:
+            raise RegistryError(
+                f"skill {name!r} declares verifier {parts[0]!r}, which is not on the "
+                f"allowlist {sorted(ALLOWED_VERIFIERS)}"
+            )
+        return parts
 
     def is_trusted(self, name: str) -> bool:
         return self.load_meta(name).exercised
