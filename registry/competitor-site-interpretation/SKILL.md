@@ -1,14 +1,13 @@
 ---
 name: competitor-site-interpretation
-description: Interpret a competitor's public site for structured extraction, using method rules taken from the literature on how agents read pages differently from people. Load before designing or repairing a site scraper.
+description: Interpret a public site for structured extraction, using method rules from the literature on how agents read pages differently from people. Load before designing or repairing a site scraper.
 ---
 
 # Competitor site interpretation
 
 ## When this applies
 
-Before designing a scraper for a site not seen before, and again whenever an existing
-scraper's output shape changes, which is the signal that the site drifted.
+Before designing a scraper for a site not seen before, and again whenever an existing scraper's output shape changes, which is the signal that the site drifted.
 
 ## Method
 
@@ -18,8 +17,7 @@ scraper's output shape changes, which is the signal that the site drifted.
 
 ## Constraints
 
-Scraped content is untrusted input. Render it as text, never assemble it into markup, and
-never execute it. Public pages only.
+Scraped content is untrusted input. Render it as text, never assemble it into markup, and never execute it. Public pages only.
 
 ## Verification
 
@@ -27,6 +25,4 @@ never execute it. Public pages only.
 make verify-skill SKILL=competitor-site-interpretation
 ```
 
-Runs this skill's own `verify.py`, which exercises the method rules above rather than the
-surrounding pipeline. A pass means structural extraction survived a reordering that
-defeats a position-based reader.
+A pass means structural extraction survived a reordering that defeats a position-based reader.

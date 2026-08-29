@@ -2,7 +2,7 @@ name: competitor-site-interpretation
 version: 1
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T20:12:11.384125Z'
+exercised_at: '2026-08-29T20:12:46.109378Z'
 exercised_by: make verify-skill SKILL=competitor-site-interpretation
-exercised_hash: 8058872ccb07631298acc9f89ca312798b18848e87b72aad385c45f9c47571e0
+exercised_hash: 497589d389f20934227d4df7ef76dcbb065fc56398216897761698f5b67e28d2
 citations: 3

@@ -29,5 +29,36 @@
         "method_rule": "Screenshots omit content that is occluded, unrendered or hidden behind interaction. Do not treat visual salience as a proxy for presence; confirm against a structural representation."
       }
     ]
+  },
+  "Does current literature change how entities should be linked across independent public sources?": {
+    "citations": [
+      {
+        "key": "transitive-closure-collapse",
+        "title": "Entity Resolution in Practice: Lessons from a Self-Serve Pipeline",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2026,
+        "identifier": "arXiv:2607.26298",
+        "method_rule": "Do not take transitive closure over pairwise matches. One false positive chains records that share nothing into a single cluster, and the error compounds rather than averaging out. Require a verified merge step before joining clusters."
+      },
+      {
+        "key": "linkage-uncertainty",
+        "title": "Generalized Bayesian Record Linkage and Regression with Exact Error Propagation",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2018,
+        "identifier": "arXiv:1810.04808",
+        "method_rule": "Carry linkage uncertainty into the downstream conclusion rather than collapsing matches to boolean edges. A graph built from hard edges reports a confidence it never earned."
+      },
+      {
+        "key": "blocking-before-comparison",
+        "title": "A Survey of Blocking and Filtering Techniques for Entity Resolution",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2019,
+        "identifier": "arXiv:1905.06167",
+        "method_rule": "Block candidates on a cheap key before pairwise comparison, so comparison cost stays tractable and unrelated records are never compared in the first place."
+      }
+    ]
   }
 }
