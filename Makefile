@@ -1,9 +1,15 @@
-PYTHON ?= python3
-.PHONY: deps demo trueforge-skills verify-skill fixture scrape exercise serve test clean
+# PEP 668 forbids pip installing into a system Python, so `make deps` builds a venv and
+# every target then picks it up automatically. Override with PYTHON=... if you prefer.
+VENV ?= .venv
+PYTHON ?= $(shell [ -x $(VENV)/bin/python ] && echo $(VENV)/bin/python || echo python3)
+.PHONY: deps demo map trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
-	$(PYTHON) -m pip install -r requirements.txt
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install --quiet --upgrade pip
+	$(VENV)/bin/pip install --quiet -r requirements.txt
+	@echo "dependencies installed into $(VENV); every target now uses it automatically"
 
 
 # Offline, deterministic path. No network, no credentials. This is the exercise gate.
@@ -24,7 +30,7 @@ scrape:
 # A minted skill is untrusted until it completes one passing offline run.
 exercise: test fixture
 
-serve: fixture
+serve: fixture map
 	$(PYTHON) -m http.server 8000
 
 test:
@@ -43,7 +49,14 @@ verify-skill:
 	@test -n "$(SKILL)" || { echo "SKILL=<name> is required" >&2; exit 2; }
 	$(PYTHON) -m orchestrator.verify_skill $(SKILL)
 
+<<<<<<< HEAD
 # Register this registry with a running TrueForge instance. No credentials:
 # the repository is public, so TrueForge fetches the packs itself.
 trueforge-skills:
 	$(PYTHON) scripts/register_skills.py
+=======
+# Build the interconnection graph and render it.
+map:
+	$(PYTHON) -m pipeline.graph
+	@echo "open map/board.html after: make serve"
+>>>>>>> 2b411dc (Build the interconnection map, and fix make deps on a clean machine)

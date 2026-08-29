@@ -36,9 +36,18 @@ See [`registry/README.md`](registry/README.md) for the schema and the gate.
 
 ## Run
 
-Requires Python 3.9 or newer and Node.js 22.14 or newer.
+There are two Python floors, not one. The pipeline is standard library only and runs on
+3.9, verified by executing its suite and the offline path under 3.9.6. The orchestrator
+needs 3.11: `orchestrator/loop.py` declares a type alias using the `X | None` union, and a
+type alias is evaluated eagerly even with `from __future__ import annotations`, which covers
+annotations but not assignments. 3.10 is likely fine and is untested here, so it is not
+claimed. Node.js 22.14 or newer for TrueForge.
 
 ```sh
+# One-time: dependencies go in a venv, which every target then picks up automatically.
+# A system Python refuses a direct pip install under PEP 668.
+make deps
+
 # Start the harness. UI at http://localhost:8790
 npx @truefoundry/trueforge
 
@@ -54,7 +63,8 @@ make exercise
 # The loop end to end, offline. No credentials and no operator keys.
 make demo
 
-# Render the output
+# Build the interconnection graph and render it
+make map
 make serve   # then open http://localhost:8000/map/board.html
 ```
 
@@ -113,7 +123,7 @@ above still register and list correctly.
 | `registry/` | Git-backed skill packs in the format TrueForge reads, with the gate schema. |
 | `config/` | Collector behaviour and drift thresholds, versioned rather than passed ad hoc. |
 | `fixtures/` | Deterministic payloads the offline path and the exercise gate run against. |
-| `map/` | Rendered output view. |
+| `map/` | Interconnection map, rendered from `data/graph.json`. |
 | `docs/` | Setup runbook. |
 
 ## Qodo Code Review Evidence
