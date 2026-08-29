@@ -1,0 +1,33 @@
+{
+  "Does current literature change how an agent should interpret a web page compared with a human reader?": {
+    "citations": [
+      {
+        "key": "web-for-agents",
+        "title": "Build the web for agents, not agents for the web",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2025,
+        "identifier": "arXiv:2506.10953",
+        "method_rule": "Do not assume the human-facing rendering is the agent-facing interface. Target the page's semantic structure directly rather than reproducing what a human reader sees."
+      },
+      {
+        "key": "dom-downsampling",
+        "title": "Beyond Pixels: Exploring DOM Downsampling for LLM-Based Web Agents",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2025,
+        "identifier": "arXiv:2508.04412",
+        "method_rule": "Raw DOM is impractical at realistic page sizes, where deeply nested containers, styling hooks and decorative elements obscure semantic structure. Downsample to the semantic skeleton before extraction rather than parsing raw HTML."
+      },
+      {
+        "key": "webvoyager",
+        "title": "WebVoyager: Building an End-to-End Web Agent with Large Multimodal Models",
+        "authors": "see arXiv record; author list not verified in this dispatch",
+        "venue": "arXiv preprint",
+        "year": 2024,
+        "identifier": "arXiv:2401.13919",
+        "method_rule": "Screenshots omit content that is occluded, unrendered or hidden behind interaction. Do not treat visual salience as a proxy for presence; confirm against a structural representation."
+      }
+    ]
+  }
+}

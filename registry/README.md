@@ -17,8 +17,9 @@ name: competitor-site-interpretation   # directory name, kebab-case
 version: 1                             # integer, bumped on re-mint
 minted_from: research                  # research | manual
 exercised: false                       # see the exercise gate below
-exercised_at: null                     # ISO-8601 UTC when it first passed
+exercised_at: null                     # ISO-8601 UTC when it passed
 exercised_by: null                     # command that constituted the passing run
+exercised_hash: null                   # digest of the files that passed
 citations: 3                           # count in citations.md, 0 for manual skills
 ```
 
@@ -27,7 +28,18 @@ citations: 3                           # count in citations.md, 0 for manual ski
 A minted skill is **untrusted until it has completed one successful run.**
 `exercised: false -> true` happens only on a passing run, and nothing else may flip it.
 
-This is the mechanism that prevents built-never-run skills from entering the trusted set.
+A skill is verified by its own `verify.py`, invoked as `make verify-skill SKILL=<name>`.
+A skill that declares no verification, or ships no `verify.py`, cannot be exercised and so
+cannot become trusted. Verification that exercises the surrounding machinery rather than
+the skill's own method is not verification of that skill.
+
+`exercised_hash` is what makes the flag mean something. Recording that a run passed,
+without recording what passed, lets an edit keep the flag: the metadata still says trusted
+while the files it was earned against are gone. The hash covers every file in the skill
+directory except `meta.yaml`, so the body, the citations and the verifier are all inside
+the binding, and a skill whose files no longer match is refused at the point of use.
+
+This is the mechanism that keeps built-never-run skills out of the trusted set.
 The offline fixture path is what a skill is exercised against first:
 
 ```sh

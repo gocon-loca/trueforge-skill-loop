@@ -1,5 +1,10 @@
 PYTHON ?= python3
-.PHONY: fixture scrape exercise serve test clean
+.PHONY: deps demo verify-skill fixture scrape exercise serve test clean
+
+# The orchestrator needs PyYAML. The pipeline does not need anything.
+deps:
+	$(PYTHON) -m pip install -r requirements.txt
+
 
 # Offline, deterministic path. No network, no credentials. This is the exercise gate.
 fixture:
@@ -24,6 +29,16 @@ serve: fixture
 
 test:
 	$(PYTHON) -m unittest discover -s pipeline/tests -t . -v
+	$(PYTHON) -m unittest discover -s orchestrator/tests -t . -v
 
 clean:
 	rm -f data/papers.db data/papers.json artifacts/raw-scrape.json
+
+# The loop end to end, offline. No credentials, no operator keys.
+demo:
+	$(PYTHON) -m orchestrator.demo
+
+# One skill's own verification. The only command a minted skill may invoke.
+verify-skill:
+	@test -n "$(SKILL)" || { echo "SKILL=<name> is required" >&2; exit 2; }
+	$(PYTHON) -m orchestrator.verify_skill $(SKILL)
