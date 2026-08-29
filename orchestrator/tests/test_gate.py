@@ -328,11 +328,10 @@ class VerificationCommandTests(unittest.TestCase):
             with self.subTest(cmd=hostile), self.assertRaises(RegistryError):
                 self.registry.read_verification_command("demo-skill")
 
-    def test_shell_metacharacters_do_not_reach_a_shell(self) -> None:
+    def test_shell_metacharacters_are_rejected_in_make_arguments(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), skill_body("make exercise; whoami"))
-        parts = self.registry.read_verification_command("demo-skill")
-        self.assertEqual(parts, ("make", "exercise;", "whoami"))
-        self.assertNotIn("|", parts[0])
+        with self.assertRaises(RegistryError):
+            self.registry.read_verification_command("demo-skill")
 
     def test_skill_without_verification_section_cannot_be_exercised(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# Demo\n\nNo verification here.\n")
@@ -340,20 +339,44 @@ class VerificationCommandTests(unittest.TestCase):
             self.registry.read_verification_command("demo-skill")
 
     def test_gate_uses_the_declared_command_when_none_is_forced(self) -> None:
-        # The gate runs with cwd=workdir, so a relative script proves both that the
+        # The gate runs with cwd=workdir, so a Makefile there proves both that the
         # declared command is what ran and that it ran in the right directory.
-        (self.root / "verify_marker.py").write_text(
-            "from pathlib import Path\nPath('ran-declared').write_text('ok')\n"
+        (self.root / "Makefile").write_text(
+            "ran-marker:\n\t@echo ok > ran-declared\n"
         )
         marker = self.root / "ran-declared"
-        self.registry.mint(
-            "demo-skill", grounded_digest(), skill_body("python3 verify_marker.py")
-        )
+        self.registry.mint("demo-skill", grounded_digest(), skill_body("make ran-marker"))
         gate = ExerciseGate(self.registry, self.root, command=None)
         result = gate.exercise("demo-skill")
         self.assertTrue(result.passed, result.stderr)
         self.assertTrue(marker.exists(), "the skill's own declared command must be what runs")
-        self.assertEqual(self.registry.load_meta("demo-skill").exercised_by, "python3 verify_marker.py")
+        self.assertEqual(
+            self.registry.load_meta("demo-skill").exercised_by, "make ran-marker"
+        )
+
+    def test_interpreters_are_not_on_the_verifier_allowlist(self) -> None:
+        """Finding 1: `python3 -c "<anything>"` is arbitrary execution, so an allowlist
+        naming an interpreter constrains nothing."""
+        for hostile in (
+            "python3 -c import_os",
+            "python3 evil.py",
+            "pytest",
+            "sh run.sh",
+            "make; whoami",
+            "make --eval=$(shell id)",
+        ):
+            self.registry.mint("demo-skill", grounded_digest(), skill_body(hostile))
+            with self.subTest(cmd=hostile), self.assertRaises(RegistryError):
+                self.registry.read_verification_command("demo-skill")
+
+    def test_make_targets_and_assignments_are_permitted(self) -> None:
+        self.registry.mint(
+            "demo-skill", grounded_digest(), skill_body("make verify-skill SKILL=demo-skill")
+        )
+        self.assertEqual(
+            self.registry.read_verification_command("demo-skill"),
+            ("make", "verify-skill", "SKILL=demo-skill"),
+        )
 
     def test_undeclared_verification_is_a_gate_failure_not_a_crash(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# Demo\n\nNothing declared.\n")
@@ -508,3 +531,90 @@ class GroundingFailureTests(unittest.TestCase):
         self.assertFalse(result.executed)
         self.assertEqual(worker.calls, [], "stale trusted skill must not perform the work")
         self.assertTrue(any("stale" in n for n in result.notes))
+
+
+class RemainingReviewFindingsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.registry = Registry(self.root / "registry")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_citations_without_method_rules_do_not_ground_a_skill(self) -> None:
+        """Finding 4: counting citations passed a digest that encoded no rules at all."""
+        hollow = Digest(
+            question="q",
+            citations=tuple(
+                Citation(key=f"k{i}", title="T", authors="A", venue="V", year=2024,
+                         identifier=f"arXiv:{i}", method_rule="   ")
+                for i in range(3)
+            ),
+        )
+        self.assertFalse(hollow.is_groundable())
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", hollow, "# body")
+
+    def test_citation_without_identifier_is_not_traceable(self) -> None:
+        untraceable = Digest(
+            question="q",
+            citations=(Citation(key="k", title="T", authors="A", venue="V", year=2024,
+                                identifier="", method_rule="a real rule"),),
+        )
+        self.assertFalse(untraceable.is_groundable())
+
+    def test_citations_count_records_only_grounded_ones(self) -> None:
+        mixed = Digest(
+            question="q",
+            citations=(
+                Citation(key="good", title="T", authors="A", venue="V", year=2024,
+                         identifier="arXiv:1", method_rule="a real rule"),
+                Citation(key="hollow", title="T", authors="A", venue="V", year=2024,
+                         identifier="arXiv:2", method_rule=""),
+            ),
+        )
+        meta = self.registry.mint("demo-skill", mixed, "# body")
+        self.assertEqual(meta.citations, 1, "a rule-less citation must not inflate the count")
+
+    def test_concurrent_tickets_do_not_invalidate_each_other(self) -> None:
+        """Finding 7: one nonce per skill meant a second gate silently voided the first."""
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        first = self.registry.begin_exercise("demo-skill")
+        second = self.registry.begin_exercise("demo-skill")
+        self.registry.mark_exercised(first, returncode=0, command="make a")
+        self.assertTrue(self.registry.is_trusted("demo-skill"))
+        # the second ticket is still honoured; it saw the same version and content
+        self.registry.mark_exercised(second, returncode=0, command="make b")
+        self.assertEqual(self.registry.load_meta("demo-skill").exercised_by, "make b")
+
+    def test_skill_changed_between_trust_check_and_execution_blocks_work(self) -> None:
+        """Findings 2 and 3: work must not run under content that never passed."""
+        registry = self.registry
+        registry.mint("demo-skill", grounded_digest(), "# body v1")
+        trust_via_gate(registry, self.root, "demo-skill")
+        worker = _RecordingWorker()
+
+        class _RemintingRegistry(Registry):
+            """Re-mints in the window between the trust check and the run."""
+
+            def content_hash(self, name: str) -> str:
+                value = super().content_hash(name)
+                if getattr(self, "_fired", False) is False and name == "demo-skill":
+                    self._fired = True
+                    super().mint(name, grounded_digest(3), "# body v2 swapped in")
+                return value
+
+        hostile = _RemintingRegistry(registry.root)
+        loop = SkillLoop(
+            registry=hostile,
+            gate=ExerciseGate(hostile, self.root, command=("true",)),
+            research=_StaticResearch(),
+            worker=worker,
+            gap_detector=lambda _t: None,
+            skill_writer=lambda _t, _d: "# body",
+        )
+        result = loop.run_step(Task(name="t", description="no gap", skill="demo-skill"))
+        self.assertFalse(result.executed)
+        self.assertEqual(worker.calls, [])
+        self.assertTrue(any("changed between" in n for n in result.notes), result.notes)

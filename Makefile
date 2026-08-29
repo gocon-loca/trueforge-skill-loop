@@ -1,5 +1,5 @@
 PYTHON ?= python3
-.PHONY: deps demo fixture scrape exercise serve test clean
+.PHONY: deps demo verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -37,3 +37,8 @@ clean:
 # The loop end to end, offline. No credentials, no operator keys.
 demo:
 	$(PYTHON) -m orchestrator.demo
+
+# One skill's own verification. The only command a minted skill may invoke.
+verify-skill:
+	@test -n "$(SKILL)" || { echo "SKILL=<name> is required" >&2; exit 2; }
+	$(PYTHON) -m orchestrator.verify_skill $(SKILL)

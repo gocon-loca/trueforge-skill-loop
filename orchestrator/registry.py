@@ -19,6 +19,7 @@ import re
 import secrets
 import shlex
 import tempfile
+import threading
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,7 +33,15 @@ VERIFICATION_BLOCK = re.compile(
     r"^##\s+Verification\s*$.*?^```[a-zA-Z]*\s*$(?P<body>.*?)^```\s*$",
     re.MULTILINE | re.DOTALL,
 )
-ALLOWED_VERIFIERS = frozenset({"make", "python3", "python", "pytest", "unittest"})
+# Finding 1. The previous allowlist named python3 and pytest, which is not a constraint:
+# `python3 -c "<anything>"` is arbitrary code execution, so an allowlist naming an
+# interpreter offers assurance it cannot deliver.
+#
+# A skill may invoke `make` only, with bare target names and VAR=VALUE assignments.
+# Targets live in this repository's reviewed Makefile, so what a minted skill can cause
+# to run is fixed by review rather than by whatever its own body says.
+ALLOWED_VERIFIERS = frozenset({"make"})
+MAKE_ARG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(=[A-Za-z0-9._/-]*)?$")
 RESERVED_NAMES = frozenset({"_template"})
 
 
@@ -164,7 +173,10 @@ class Registry:
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root)
-        self._outstanding: dict[str, str] = {}
+        # Finding 7. One nonce per skill meant a second begin_exercise silently
+        # invalidated the first gate's pass. Tickets coexist; each is consumed once.
+        self._outstanding: dict[str, set[str]] = {}
+        self._lock = threading.RLock()
 
     # ---- reading -------------------------------------------------------------
 
@@ -225,9 +237,16 @@ class Registry:
             raise RegistryError(f"skill {name!r} declares an empty verification command")
         if parts[0] not in ALLOWED_VERIFIERS:
             raise RegistryError(
-                f"skill {name!r} declares verifier {parts[0]!r}, which is not on the "
-                f"allowlist {sorted(ALLOWED_VERIFIERS)}"
+                f"skill {name!r} declares verifier {parts[0]!r}; only "
+                f"{sorted(ALLOWED_VERIFIERS)} may be invoked, because an allowlist naming "
+                f"an interpreter does not constrain what runs"
             )
+        for arg in parts[1:]:
+            if not MAKE_ARG.match(arg):
+                raise RegistryError(
+                    f"skill {name!r} declares make argument {arg!r}; only bare target "
+                    f"names and VAR=VALUE assignments are permitted"
+                )
         return parts
 
     def is_trusted(self, name: str) -> bool:
@@ -261,7 +280,8 @@ class Registry:
             nonce=secrets.token_hex(16),
             issued_at=datetime.now(timezone.utc),
         )
-        self._outstanding[name] = ticket.nonce
+        with self._lock:
+            self._outstanding.setdefault(name, set()).add(ticket.nonce)
         return ticket
 
     def mark_exercised(
@@ -273,35 +293,40 @@ class Registry:
         and a skill whose version and content still match what the ticket saw.
         """
         name = ticket.skill
-        if self._outstanding.get(name) != ticket.nonce:
-            raise RegistryError(
-                f"refusing to mark {name!r} exercised: ticket is unknown or already consumed"
-            )
-        if returncode != 0:
-            self._outstanding.pop(name, None)
-            raise RegistryError(
-                f"refusing to mark {name!r} exercised: run exited {returncode}"
-            )
+        with self._lock:
+            if ticket.nonce not in self._outstanding.get(name, set()):
+                raise RegistryError(
+                    f"refusing to mark {name!r} exercised: ticket is unknown or already "
+                    f"consumed"
+                )
+            self._outstanding[name].discard(ticket.nonce)
 
-        meta = self.load_meta(name)
-        if meta.version != ticket.version or self.content_hash(name) != ticket.content_hash:
-            # Finding 4: the skill was re-minted while the run was in flight, so this pass
-            # is evidence about content that is no longer on disk.
-            self._outstanding.pop(name, None)
-            raise RegistryError(
-                f"refusing to mark {name!r} exercised: skill changed during the run "
-                f"(ticket saw v{ticket.version}, disk has v{meta.version}); re-exercise it"
-            )
+            if returncode != 0:
+                raise RegistryError(
+                    f"refusing to mark {name!r} exercised: run exited {returncode}"
+                )
 
-        self._outstanding.pop(name, None)
-        updated = replace(
-            meta,
-            exercised=True,
-            exercised_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            exercised_by=command,
-        )
-        self._write_meta(name, updated)
-        return updated
+            meta = self.load_meta(name)
+            if (
+                meta.version != ticket.version
+                or self.content_hash(name) != ticket.content_hash
+            ):
+                # The skill was re-minted while the run was in flight, so this pass is
+                # evidence about content that is no longer on disk.
+                raise RegistryError(
+                    f"refusing to mark {name!r} exercised: skill changed during the run "
+                    f"(ticket saw v{ticket.version}, disk has v{meta.version}); "
+                    f"re-exercise it"
+                )
+
+            updated = replace(
+                meta,
+                exercised=True,
+                exercised_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                exercised_by=command,
+            )
+            self._write_meta(name, updated)
+            return updated
 
     def reset_trust(self, name: str) -> SkillMeta:
         """Re-minting revokes trust. Same single writer, so the three fields cannot drift."""
@@ -312,7 +337,13 @@ class Registry:
 
     # ---- minting --------------------------------------------------------------
 
-    def mint(self, name: str, digest: Digest, skill_body: str) -> SkillMeta:
+    def mint(
+        self,
+        name: str,
+        digest: Digest,
+        skill_body: str,
+        extra_files: dict[str, str] | None = None,
+    ) -> SkillMeta:
         """Write a skill pack from a research digest. Always lands untrusted."""
         if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
             raise RegistryError(f"invalid skill name {name!r}; expected kebab-case")
@@ -341,7 +372,8 @@ class Registry:
                     exercised_by=None,
                 ),
             )
-            self._outstanding.pop(name, None)
+            with self._lock:
+                self._outstanding.pop(name, None)
 
         (skill_dir / "SKILL.md").write_text(skill_body, encoding="utf-8")
         (skill_dir / "citations.md").write_text(
@@ -350,6 +382,11 @@ class Registry:
             + "\n".join(c.to_markdown() for c in digest.citations),
             encoding="utf-8",
         )
+        for filename, content in (extra_files or {}).items():
+            if "/" in filename or filename.startswith("."):
+                raise RegistryError(f"invalid skill file name {filename!r}")
+            (skill_dir / filename).write_text(content, encoding="utf-8")
+
         meta = SkillMeta(
             name=name,
             version=previous_version + 1,
@@ -357,7 +394,7 @@ class Registry:
             exercised=False,
             exercised_at=None,
             exercised_by=None,
-            citations=len(digest.citations),
+            citations=len(digest.grounded_citations()),
         )
         self._write_meta(name, meta)
         return meta

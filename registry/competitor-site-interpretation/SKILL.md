@@ -24,7 +24,9 @@ never execute it. Public pages only.
 ## Verification
 
 ```sh
-make fixture
+make verify-skill SKILL=competitor-site-interpretation
 ```
 
-The offline fixture path must complete and publish its records without network access.
+Runs this skill's own `verify.py`, which exercises the method rules above rather than the
+surrounding pipeline. A pass means structural extraction survived a reordering that
+defeats a position-based reader.

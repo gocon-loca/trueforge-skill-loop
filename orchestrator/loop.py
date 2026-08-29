@@ -74,6 +74,7 @@ class SkillLoop:
         worker: WorkExecutor,
         gap_detector: GapDetector,
         skill_writer: Callable[[Task, Digest], str],
+        skill_files: Callable[[], dict[str, str]] | None = None,
         max_depth: int = MAX_RESEARCH_DEPTH,
     ) -> None:
         self.registry = registry
@@ -82,6 +83,7 @@ class SkillLoop:
         self.worker = worker
         self.gap_detector = gap_detector
         self.skill_writer = skill_writer
+        self.skill_files = skill_files
         self.max_depth = max_depth
 
     def run_step(self, task: Task, depth: int = 0) -> StepResult:
@@ -100,7 +102,12 @@ class SkillLoop:
             digest = self.research.run(gap.question)
             result.digest = digest
             try:
-                self.registry.mint(task.skill, digest, self.skill_writer(task, digest))
+                self.registry.mint(
+                    task.skill,
+                    digest,
+                    self.skill_writer(task, digest),
+                    extra_files=self.skill_files() if self.skill_files else None,
+                )
                 result.minted = True
             except UngroundedSkillError as exc:
                 # Finding 6. A refused mint used to fall through and run the work with
@@ -118,10 +125,33 @@ class SkillLoop:
             result.exercise = self.gate.exercise(task.skill)
 
         # 6. EXECUTE, only with a trusted skill.
+        #
+        # Findings 2 and 3. Checking trust and then executing leaves a window: a re-mint
+        # between the two means work runs under content that never passed. The check
+        # therefore records what it approved, and the approval is re-confirmed against
+        # disk immediately before the work runs.
+        #
+        # This closes the in-process window. It is not a distributed lock: another process
+        # editing the registry between the confirmation and the call can still change the
+        # files underneath. That is out of scope for a single-process orchestrator, and it
+        # is recorded here rather than implied away.
         try:
-            self.registry.require_trusted(task.skill)
+            approved = self.registry.require_trusted(task.skill)
+            approved_hash = self.registry.content_hash(task.skill)
         except Exception as exc:
             result.notes.append(f"execution blocked: {exc}")
+            return result
+
+        current = self.registry.load_meta(task.skill)
+        if (
+            not current.exercised
+            or current.version != approved.version
+            or self.registry.content_hash(task.skill) != approved_hash
+        ):
+            result.notes.append(
+                "execution blocked: the skill changed between the trust check and the "
+                "run, so what was approved is not what would execute"
+            )
             return result
 
         result.output = self.worker.execute(task, task.skill)

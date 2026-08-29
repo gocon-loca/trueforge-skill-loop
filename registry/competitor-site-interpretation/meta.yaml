@@ -2,6 +2,6 @@ name: competitor-site-interpretation
 version: 1
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T19:43:58.852658Z'
-exercised_by: make fixture
+exercised_at: '2026-08-29T19:56:14.902757Z'
+exercised_by: make verify-skill SKILL=competitor-site-interpretation
 citations: 3

@@ -52,8 +52,21 @@ class Digest:
         return tuple(c.method_rule for c in self.citations)
 
     def is_groundable(self) -> bool:
-        """A digest with no citations cannot ground a skill, so minting must refuse it."""
-        return len(self.citations) > 0
+        """Whether this digest can ground a skill.
+
+        Finding 4. Counting citations was not enough: a citation carrying an empty
+        method_rule contributes nothing to the skill's method, so a digest of three such
+        citations passed grounding while encoding no rules at all. A citation must carry
+        both a rule and an identifier for the rule to be traceable to a source.
+        """
+        return any(
+            c.method_rule.strip() and c.identifier.strip() for c in self.citations
+        )
+
+    def grounded_citations(self) -> tuple["Citation", ...]:
+        return tuple(
+            c for c in self.citations if c.method_rule.strip() and c.identifier.strip()
+        )
 
 
 @runtime_checkable

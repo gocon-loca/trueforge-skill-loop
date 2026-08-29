@@ -7,6 +7,7 @@ run produces the evidence the registry will accept.
 
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 from dataclasses import dataclass
@@ -93,6 +94,14 @@ class ExerciseGate:
             )
 
         try:
+            # Name the skill under verification in the environment. Without this the
+            # command has no way to know what it is verifying, which is how a pass for
+            # an unrelated run came to confer trust (finding 5).
+            env = {
+                **os.environ,
+                "SKILL_NAME": name,
+                "SKILL_REGISTRY": str(self.registry.root.resolve()),
+            }
             completed = subprocess.run(
                 command,
                 cwd=str(self.workdir),
@@ -100,6 +109,7 @@ class ExerciseGate:
                 text=True,
                 timeout=self.timeout,
                 check=False,
+                env=env,
             )
         except subprocess.TimeoutExpired as exc:
             return ExerciseResult(

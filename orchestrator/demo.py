@@ -76,11 +76,23 @@ never execute it. Public pages only.
 ## Verification
 
 ```sh
-make fixture
+make verify-skill SKILL={SKILL}
 ```
 
-The offline fixture path must complete and publish its records without network access.
+Runs this skill's own `verify.py`, which exercises the method rules above rather than the
+surrounding pipeline. A pass means structural extraction survived a reordering that
+defeats a position-based reader.
 """
+
+
+VERIFY_TEMPLATE = (
+    Path(__file__).resolve().parent / "templates" / "verify_site_interpretation.py"
+)
+
+
+def skill_files() -> dict[str, str]:
+    """The skill ships its own verification, so the gate can exercise its method."""
+    return {"verify.py": VERIFY_TEMPLATE.read_text(encoding="utf-8")}
 
 
 class PipelineWorker:
@@ -106,6 +118,7 @@ def main() -> int:
         worker=PipelineWorker(),
         gap_detector=detect_gap,
         skill_writer=write_skill,
+        skill_files=skill_files,
     )
 
     task = Task(
@@ -142,6 +155,7 @@ def main() -> int:
         worker=_RefusingWorker(),
         gap_detector=detect_gap,
         skill_writer=write_skill,
+        skill_files=skill_files,
     ).run_step(task)
     for line in blocked.trace():
         print(f"  {line}")
