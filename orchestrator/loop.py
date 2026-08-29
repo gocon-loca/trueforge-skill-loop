@@ -121,6 +121,12 @@ class SkillLoop:
                 return result
 
         # 5. EXERCISE GATE. A freshly minted skill is untrusted until this passes.
+        #
+        # An already-trusted skill is not re-exercised here, which is deliberate: trust is
+        # earned once per version and re-earned on every re-mint. What makes that safe is
+        # not this branch but require_trusted below, which rejects a skill whose files no
+        # longer match the hash recorded when it passed. Skipping the run is an
+        # optimisation; it is not what decides whether the skill may be used.
         if result.minted or not self._is_trusted(task.skill):
             result.exercise = self.gate.exercise(task.skill)
 
@@ -138,16 +144,23 @@ class SkillLoop:
         try:
             approved = self.registry.require_trusted(task.skill)
             approved_hash = self.registry.content_hash(task.skill)
+
+            # Confirm again immediately before running. require_trusted already checks the
+            # files against the hash recorded at exercise time; this closes the remaining
+            # window between that check and the call below.
+            current = self.registry.load_meta(task.skill)
+            changed = (
+                not current.exercised
+                or current.version != approved.version
+                or self.registry.content_hash(task.skill) != approved_hash
+            )
         except Exception as exc:
+            # Finding: the recheck could itself raise, and the exception escaped run_step
+            # instead of blocking the step. A failed check is a blocked step.
             result.notes.append(f"execution blocked: {exc}")
             return result
 
-        current = self.registry.load_meta(task.skill)
-        if (
-            not current.exercised
-            or current.version != approved.version
-            or self.registry.content_hash(task.skill) != approved_hash
-        ):
+        if changed:
             result.notes.append(
                 "execution blocked: the skill changed between the trust check and the "
                 "run, so what was approved is not what would execute"

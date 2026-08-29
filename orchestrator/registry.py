@@ -67,13 +67,14 @@ def validate_trust_state(meta: "SkillMeta") -> None:
     time, so the cheap version of forging trust does not survive a load, and the expensive
     version still shows up as a reviewable diff.
     """
-    if meta.exercised and not (meta.exercised_at and meta.exercised_by):
+    if meta.exercised and not (meta.exercised_at and meta.exercised_by and meta.exercised_hash):
         raise InvalidTrustStateError(
             f"skill {meta.name!r} is marked exercised but carries no evidence "
-            f"(exercised_at={meta.exercised_at!r}, exercised_by={meta.exercised_by!r}); "
+            f"(exercised_at={meta.exercised_at!r}, exercised_by={meta.exercised_by!r}, "
+        f"exercised_hash={meta.exercised_hash!r}); "
             f"a trust record without evidence is not auditable"
         )
-    if not meta.exercised and (meta.exercised_at or meta.exercised_by):
+    if not meta.exercised and (meta.exercised_at or meta.exercised_by or meta.exercised_hash):
         raise InvalidTrustStateError(
             f"skill {meta.name!r} is not exercised but carries exercise evidence; "
             f"trust was revoked without clearing the record"
@@ -139,6 +140,7 @@ class SkillMeta:
     exercised: bool
     exercised_at: str | None
     exercised_by: str | None
+    exercised_hash: str | None
     citations: int
 
     @classmethod
@@ -153,6 +155,7 @@ class SkillMeta:
             exercised=_strict_bool(data["exercised"], field="exercised"),
             exercised_at=data.get("exercised_at"),
             exercised_by=data.get("exercised_by"),
+            exercised_hash=data.get("exercised_hash"),
             citations=int(data.get("citations", 0)),
         )
 
@@ -164,6 +167,7 @@ class SkillMeta:
             "exercised": self.exercised,
             "exercised_at": self.exercised_at,
             "exercised_by": self.exercised_by,
+            "exercised_hash": self.exercised_hash,
             "citations": self.citations,
         }
 
@@ -257,18 +261,40 @@ class Registry:
         meta = self.load_meta(name)
         if not meta.exercised:
             raise UntrustedSkillError(
-                f"skill {name!r} has not passed the exercise gate and must not be used for work; "
-                f"run `make exercise` against it first"
+                f"skill {name!r} has not passed the exercise gate and must not be used "
+                f"for work; run `make exercise` against it first"
+            )
+        current = self.content_hash(name)
+        if current != meta.exercised_hash:
+            # The trust flag says a run passed, but not for these files. Recording only
+            # that something passed, without recording what, let an edit keep the flag.
+            raise UntrustedSkillError(
+                f"skill {name!r} is marked exercised, but its files have changed since "
+                f"that run; the trusted content is not what would execute. Re-exercise it"
             )
         return meta
 
     # ---- the single writer of the trust fields --------------------------------
 
     def content_hash(self, name: str) -> str:
-        """Hash of the skill body the gate is about to verify."""
-        skill_md = self.path_for(name) / "SKILL.md"
-        body = skill_md.read_bytes() if skill_md.is_file() else b""
-        return hashlib.sha256(body).hexdigest()
+        """Hash of everything the gate relies on, not only SKILL.md.
+
+        Finding: hashing the body alone left verify.py outside the binding, so the file
+        that decides whether a skill passes could be swapped without invalidating the
+        ticket or the recorded trust. Every file in the skill directory except meta.yaml
+        is covered, in sorted order so the digest is stable.
+        """
+        skill_dir = self.path_for(name)
+        digest = hashlib.sha256()
+        if skill_dir.is_dir():
+            for path in sorted(skill_dir.iterdir()):
+                if path.name == "meta.yaml" or not path.is_file():
+                    continue
+                digest.update(path.name.encode("utf-8"))
+                digest.update(b"\0")
+                digest.update(path.read_bytes())
+                digest.update(b"\0")
+        return digest.hexdigest()
 
     def begin_exercise(self, name: str) -> ExerciseTicket:
         """Issue a single-use ticket bound to the skill state observed right now."""
@@ -324,6 +350,7 @@ class Registry:
                 exercised=True,
                 exercised_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 exercised_by=command,
+                exercised_hash=ticket.content_hash,
             )
             self._write_meta(name, updated)
             return updated
@@ -331,7 +358,13 @@ class Registry:
     def reset_trust(self, name: str) -> SkillMeta:
         """Re-minting revokes trust. Same single writer, so the three fields cannot drift."""
         meta = self.load_meta(name)
-        updated = replace(meta, exercised=False, exercised_at=None, exercised_by=None)
+        updated = replace(
+            meta,
+            exercised=False,
+            exercised_at=None,
+            exercised_by=None,
+            exercised_hash=None,
+        )
         self._write_meta(name, updated)
         return updated
 
@@ -370,6 +403,7 @@ class Registry:
                     exercised=False,
                     exercised_at=None,
                     exercised_by=None,
+                    exercised_hash=None,
                 ),
             )
             with self._lock:
@@ -379,9 +413,16 @@ class Registry:
         (skill_dir / "citations.md").write_text(
             "# Citations\n\n"
             "Every method rule this skill encodes traces to a source here.\n\n"
-            + "\n".join(c.to_markdown() for c in digest.citations),
+            + "\n".join(c.to_markdown() for c in digest.grounded_citations()),
             encoding="utf-8",
         )
+        # Files a previous version wrote that this one does not are removed, so a stale
+        # verify.py from an earlier mint cannot be what a later version is judged by.
+        written = {"SKILL.md", "citations.md", "meta.yaml"} | set((extra_files or {}))
+        for existing in skill_dir.iterdir():
+            if existing.is_file() and existing.name not in written:
+                existing.unlink()
+
         for filename, content in (extra_files or {}).items():
             if "/" in filename or filename.startswith("."):
                 raise RegistryError(f"invalid skill file name {filename!r}")
@@ -394,6 +435,7 @@ class Registry:
             exercised=False,
             exercised_at=None,
             exercised_by=None,
+            exercised_hash=None,
             citations=len(digest.grounded_citations()),
         )
         self._write_meta(name, meta)

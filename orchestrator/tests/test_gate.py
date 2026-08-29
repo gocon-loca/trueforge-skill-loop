@@ -400,6 +400,7 @@ class TrustStateValidatorTests(unittest.TestCase):
             exercised=False,
             exercised_at=None,
             exercised_by=None,
+            exercised_hash=None,
             citations=2,
         )
         base.update(over)
@@ -412,6 +413,18 @@ class TrustStateValidatorTests(unittest.TestCase):
     def test_trusted_with_partial_evidence_is_rejected(self) -> None:
         with self.assertRaises(InvalidTrustStateError):
             validate_trust_state(self._meta(exercised=True, exercised_at="2026-08-29T12:00:00Z"))
+
+    def test_trusted_without_recorded_hash_is_rejected(self) -> None:
+        """Recording that a run passed, without recording what passed, let an edit keep
+        the flag."""
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(
+                self._meta(
+                    exercised=True,
+                    exercised_at="2026-08-29T12:00:00Z",
+                    exercised_by="make verify-skill SKILL=demo-skill",
+                )
+            )
 
     def test_untrusted_carrying_evidence_is_rejected(self) -> None:
         with self.assertRaises(InvalidTrustStateError):
@@ -429,7 +442,7 @@ class TrustStateValidatorTests(unittest.TestCase):
         forged = Path(tmp.name) / "demo-skill" / "meta.yaml"
         forged.write_text(
             "name: demo-skill\nversion: 1\nminted_from: research\nexercised: true\n"
-            "exercised_at: null\nexercised_by: null\ncitations: 2\n"
+            "exercised_at: null\nexercised_by: null\nexercised_hash: null\ncitations: 2\n"
         )
         with self.assertRaises(InvalidTrustStateError):
             registry.load_meta("demo-skill")
@@ -461,7 +474,8 @@ class PathAndParsingTests(unittest.TestCase):
         meta_path = self.registry.path_for("demo-skill") / "meta.yaml"
         meta_path.write_text(
             'name: demo-skill\nversion: 1\nminted_from: research\n'
-            'exercised: "false"\nexercised_at: null\nexercised_by: null\ncitations: 2\n'
+            'exercised: "false"\nexercised_at: null\nexercised_by: null\n'
+            'exercised_hash: null\ncitations: 2\n'
         )
         with self.assertRaises(InvalidTrustStateError):
             self.registry.load_meta("demo-skill")
@@ -470,7 +484,8 @@ class PathAndParsingTests(unittest.TestCase):
         meta_path = self.registry.path_for("demo-skill") / "meta.yaml"
         meta_path.write_text(
             'name: demo-skill\nversion: 1\nminted_from: research\n'
-            'exercised: "true"\nexercised_at: x\nexercised_by: y\ncitations: 2\n'
+            'exercised: "true"\nexercised_at: x\nexercised_by: y\n'
+            'exercised_hash: z\ncitations: 2\n'
         )
         with self.assertRaises(InvalidTrustStateError):
             self.registry.load_meta("demo-skill")
@@ -618,3 +633,64 @@ class RemainingReviewFindingsTests(unittest.TestCase):
         self.assertFalse(result.executed)
         self.assertEqual(worker.calls, [])
         self.assertTrue(any("changed between" in n for n in result.notes), result.notes)
+
+
+class TrustBindsToContentTests(unittest.TestCase):
+    """Trust records what passed, not merely that something did."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.registry = Registry(self.root / "registry")
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_editing_the_body_after_trust_revokes_use(self) -> None:
+        self.assertIsNotNone(self.registry.load_meta("demo-skill").exercised_hash)
+        (self.registry.path_for("demo-skill") / "SKILL.md").write_text("# edited by hand")
+        with self.assertRaises(UntrustedSkillError):
+            self.registry.require_trusted("demo-skill")
+
+    def test_swapping_the_verifier_after_trust_revokes_use(self) -> None:
+        """The file deciding whether a skill passes must be inside the binding."""
+        (self.registry.path_for("demo-skill") / "verify.py").write_text("# swapped in")
+        with self.assertRaises(UntrustedSkillError):
+            self.registry.require_trusted("demo-skill")
+
+    def test_editing_citations_after_trust_revokes_use(self) -> None:
+        (self.registry.path_for("demo-skill") / "citations.md").write_text("# rewritten")
+        with self.assertRaises(UntrustedSkillError):
+            self.registry.require_trusted("demo-skill")
+
+    def test_untouched_skill_stays_usable(self) -> None:
+        self.assertTrue(self.registry.require_trusted("demo-skill").exercised)
+
+    def test_remint_removes_files_the_new_version_does_not_write(self) -> None:
+        """A stale verify.py from an earlier mint must not judge a later version."""
+        self.registry.mint(
+            "demo-skill", grounded_digest(), "# v2", extra_files={"verify.py": "# v2 check"}
+        )
+        self.assertTrue((self.registry.path_for("demo-skill") / "verify.py").is_file())
+        self.registry.mint("demo-skill", grounded_digest(), "# v3")
+        self.assertFalse(
+            (self.registry.path_for("demo-skill") / "verify.py").is_file(),
+            "a verifier the new version does not ship must not survive the re-mint",
+        )
+
+    def test_citations_file_carries_only_grounded_citations(self) -> None:
+        mixed = Digest(
+            question="q",
+            citations=(
+                Citation(key="good", title="T", authors="A", venue="V", year=2024,
+                         identifier="arXiv:1", method_rule="a real rule"),
+                Citation(key="hollow", title="H", authors="A", venue="V", year=2024,
+                         identifier="arXiv:2", method_rule=""),
+            ),
+        )
+        self.registry.mint("other-skill", mixed, "# body")
+        text = (self.registry.path_for("other-skill") / "citations.md").read_text()
+        self.assertIn("[good]", text)
+        self.assertNotIn("[hollow]", text)
