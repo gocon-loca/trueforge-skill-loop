@@ -103,7 +103,15 @@ class SkillLoop:
                 self.registry.mint(task.skill, digest, self.skill_writer(task, digest))
                 result.minted = True
             except UngroundedSkillError as exc:
+                # Finding 6. A refused mint used to fall through and run the work with
+                # whatever previous version happened to be trusted. A gap that fired and
+                # could not be grounded means this step has no current method, so it stops.
                 result.notes.append(f"mint refused: {exc}")
+                result.notes.append(
+                    "execution blocked: a method gap fired but research could not ground a "
+                    "skill, so the previously trusted version is stale for this step"
+                )
+                return result
 
         # 5. EXERCISE GATE. A freshly minted skill is untrusted until this passes.
         if result.minted or not self._is_trusted(task.skill):

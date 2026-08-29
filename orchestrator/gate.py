@@ -12,7 +12,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from orchestrator.registry import ExerciseEvidence, Registry, RegistryError, SkillMeta
+from orchestrator.registry import Registry, RegistryError, SkillMeta
 
 DEFAULT_EXERCISE_COMMAND = ("make", "exercise")
 
@@ -81,6 +81,17 @@ class ExerciseGate:
                 )
 
         printable = shlex.join(command)
+
+        # Bind this run to the skill state as it is right now. A re-mint while the command
+        # is in flight invalidates the ticket rather than inheriting its trust.
+        try:
+            ticket = self.registry.begin_exercise(name)
+        except RegistryError as exc:
+            return ExerciseResult(
+                skill=name, command=printable, passed=False, returncode=126,
+                stdout="", stderr=str(exc),
+            )
+
         try:
             completed = subprocess.run(
                 command,
@@ -96,18 +107,37 @@ class ExerciseGate:
                 command=printable,
                 passed=False,
                 returncode=124,
-                stdout=exc.stdout or "",
+                stdout=exc.stdout or "" if isinstance(exc.stdout, str) else "",
                 stderr=f"exercise timed out after {self.timeout}s",
+            )
+        except OSError as exc:
+            # Finding 9. A missing or non-executable verifier used to propagate and abort
+            # the caller. An unlaunchable command is a failed gate, not a crash.
+            return ExerciseResult(
+                skill=name,
+                command=printable,
+                passed=False,
+                returncode=127,
+                stdout="",
+                stderr=f"could not launch verification command: {exc}",
             )
 
         passed = completed.returncode == 0
         meta = None
         if passed:
-            # The run happened here, so the evidence is produced here. The registry records
-            # it; it does not decide it.
-            meta = self.registry.mark_exercised(
-                name, ExerciseEvidence.now(printable, passed=True)
-            )
+            # The run happened here, so the report is made here. The registry decides
+            # whether to honour it, against the ticket it issued before the run.
+            try:
+                meta = self.registry.mark_exercised(
+                    ticket, returncode=completed.returncode, command=printable
+                )
+            except RegistryError as exc:
+                return ExerciseResult(
+                    skill=name, command=printable, passed=False,
+                    returncode=completed.returncode,
+                    stdout=completed.stdout,
+                    stderr=f"run passed but trust was refused: {exc}",
+                )
         return ExerciseResult(
             skill=name,
             command=printable,

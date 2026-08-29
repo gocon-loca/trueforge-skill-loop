@@ -16,7 +16,6 @@ import yaml
 from orchestrator.gate import ExerciseGate
 from orchestrator.loop import MethodGap, SkillLoop, Task
 from orchestrator.registry import (
-    ExerciseEvidence,
     InvalidTrustStateError,
     Registry,
     RegistryError,
@@ -25,6 +24,17 @@ from orchestrator.registry import (
     UntrustedSkillError,
     validate_trust_state,
 )
+
+
+def trust_via_gate(registry: Registry, workdir: Path, name: str) -> None:
+    """Earn trust the only way callers may: by running the gate.
+
+    Review finding 1 noted the old tests obtained trust by constructing passing evidence
+    directly, which disproved the guarantee they claimed to be testing. Tests now go
+    through the gate like every other caller.
+    """
+    result = ExerciseGate(registry, workdir, command=("true",)).exercise(name)
+    assert result.passed, result.stderr
 from orchestrator.research_executor import Citation, Digest, StubResearchExecutor
 
 FIXTURE_QUESTION = (
@@ -81,21 +91,45 @@ class RegistryTrustTests(unittest.TestCase):
         with self.assertRaises(UntrustedSkillError):
             self.registry.require_trusted("demo-skill")
 
-    def test_failing_evidence_cannot_buy_trust(self) -> None:
+    def test_nonzero_exit_cannot_buy_trust(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# body")
-        evidence = ExerciseEvidence.now("make exercise", passed=False)
+        ticket = self.registry.begin_exercise("demo-skill")
         with self.assertRaises(RegistryError):
-            self.registry.mark_exercised("demo-skill", evidence)
+            self.registry.mark_exercised(ticket, returncode=1, command="make exercise")
         self.assertFalse(self.registry.load_meta("demo-skill").exercised)
 
-    def test_passing_evidence_writes_all_three_fields_together(self) -> None:
+    def test_ticket_is_single_use(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# body")
-        at = datetime(2026, 8, 29, 12, 0, tzinfo=timezone.utc)
-        meta = self.registry.mark_exercised(
-            "demo-skill", ExerciseEvidence(command="make exercise", passed=True, at=at)
+        ticket = self.registry.begin_exercise("demo-skill")
+        self.registry.mark_exercised(ticket, returncode=0, command="make exercise")
+        with self.assertRaises(RegistryError):
+            self.registry.mark_exercised(ticket, returncode=0, command="make exercise")
+
+    def test_unissued_ticket_is_refused(self) -> None:
+        from orchestrator.registry import ExerciseTicket
+
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        forged = ExerciseTicket(
+            skill="demo-skill", version=1, content_hash="x",
+            nonce="deadbeef", issued_at=datetime.now(timezone.utc),
         )
+        with self.assertRaises(RegistryError):
+            self.registry.mark_exercised(forged, returncode=0, command="make exercise")
+
+    def test_remint_during_a_run_invalidates_the_ticket(self) -> None:
+        self.registry.mint("demo-skill", grounded_digest(), "# body v1")
+        ticket = self.registry.begin_exercise("demo-skill")
+        self.registry.mint("demo-skill", grounded_digest(3), "# body v2")
+        with self.assertRaises(RegistryError):
+            self.registry.mark_exercised(ticket, returncode=0, command="make exercise")
+        self.assertFalse(self.registry.is_trusted("demo-skill"))
+
+    def test_passing_run_writes_all_three_fields_together(self) -> None:
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        ticket = self.registry.begin_exercise("demo-skill")
+        meta = self.registry.mark_exercised(ticket, returncode=0, command="make exercise")
         self.assertTrue(meta.exercised)
-        self.assertEqual(meta.exercised_at, "2026-08-29T12:00:00Z")
+        self.assertIsNotNone(meta.exercised_at)
         self.assertEqual(meta.exercised_by, "make exercise")
         # and it survives a round trip through disk
         on_disk = yaml.safe_load((self.root / "demo-skill" / "meta.yaml").read_text())
@@ -104,7 +138,7 @@ class RegistryTrustTests(unittest.TestCase):
 
     def test_remint_revokes_trust_and_bumps_version(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# body")
-        self.registry.mark_exercised("demo-skill", ExerciseEvidence.now("make exercise", passed=True))
+        trust_via_gate(self.registry, self.root, "demo-skill")
         self.assertTrue(self.registry.is_trusted("demo-skill"))
 
         second = self.registry.mint("demo-skill", grounded_digest(3), "# body v2")
@@ -114,7 +148,7 @@ class RegistryTrustTests(unittest.TestCase):
 
     def test_reset_trust_clears_all_three_fields(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# body")
-        self.registry.mark_exercised("demo-skill", ExerciseEvidence.now("make exercise", passed=True))
+        trust_via_gate(self.registry, self.root, "demo-skill")
         meta = self.registry.reset_trust("demo-skill")
         self.assertFalse(meta.exercised)
         self.assertIsNone(meta.exercised_at)
@@ -149,6 +183,18 @@ class GateTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertTrue(self.registry.is_trusted("demo-skill"))
         self.assertEqual(result.meta.exercised_by, "true")
+
+    def test_unlaunchable_verifier_is_a_gate_failure_not_a_crash(self) -> None:
+        """Finding 9: a missing executable used to propagate OSError and abort the caller."""
+        gate = ExerciseGate(
+            self.registry, self.root, command=("make", "--no-such-flag-xyz")
+        )
+        gate2 = ExerciseGate(self.registry, self.root, command=("definitely-not-a-binary-xyz",))
+        result = gate2.exercise("demo-skill")
+        self.assertFalse(result.passed)
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("could not launch", result.stderr)
+        self.assertFalse(self.registry.is_trusted("demo-skill"))
 
     def test_timeout_is_a_failure_not_a_pass(self) -> None:
         gate = ExerciseGate(self.registry, self.root, command=("sleep", "5"), timeout=1)
@@ -364,3 +410,101 @@ class TrustStateValidatorTests(unittest.TestCase):
         )
         with self.assertRaises(InvalidTrustStateError):
             registry.load_meta("demo-skill")
+
+
+class PathAndParsingTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.registry = Registry(self.root / "registry")
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_skill_names_cannot_escape_the_registry_root(self) -> None:
+        """Finding 5: only mint validated the name, so every read path accepted traversal."""
+        secret = self.root / "outside.yaml"
+        secret.write_text("name: outside\nversion: 1\n")
+        for hostile in ("../outside", "../../etc/passwd", "a/../../b", "/etc/passwd"):
+            with self.subTest(name=hostile):
+                with self.assertRaises(RegistryError):
+                    self.registry.path_for(hostile)
+                with self.assertRaises(RegistryError):
+                    self.registry.load_meta(hostile)
+
+    def test_quoted_false_is_rejected_not_coerced(self) -> None:
+        """Finding 8: bool("false") is True, so a quoted false read as trusted."""
+        meta_path = self.registry.path_for("demo-skill") / "meta.yaml"
+        meta_path.write_text(
+            'name: demo-skill\nversion: 1\nminted_from: research\n'
+            'exercised: "false"\nexercised_at: null\nexercised_by: null\ncitations: 2\n'
+        )
+        with self.assertRaises(InvalidTrustStateError):
+            self.registry.load_meta("demo-skill")
+
+    def test_quoted_true_is_also_rejected(self) -> None:
+        meta_path = self.registry.path_for("demo-skill") / "meta.yaml"
+        meta_path.write_text(
+            'name: demo-skill\nversion: 1\nminted_from: research\n'
+            'exercised: "true"\nexercised_at: x\nexercised_by: y\ncitations: 2\n'
+        )
+        with self.assertRaises(InvalidTrustStateError):
+            self.registry.load_meta("demo-skill")
+
+    def test_remint_revokes_trust_before_writing_new_content(self) -> None:
+        """Finding 3: content was written before trust was revoked, so a crash between the
+        two left new content under old passing evidence."""
+        trust_via_gate(self.registry, self.root, "demo-skill")
+        self.assertTrue(self.registry.is_trusted("demo-skill"))
+
+        skill_md = self.registry.path_for("demo-skill") / "SKILL.md"
+        observed: list[bool] = []
+        real_write = Path.write_text
+
+        def spy(self_path, *a, **kw):
+            if self_path == skill_md:
+                observed.append(Registry(self.registry.root).load_meta("demo-skill").exercised)
+            return real_write(self_path, *a, **kw)
+
+        Path.write_text = spy
+        try:
+            self.registry.mint("demo-skill", grounded_digest(3), "# body v2")
+        finally:
+            Path.write_text = real_write
+
+        self.assertEqual(
+            observed, [False], "trust must already be revoked when new content is written"
+        )
+
+
+class GroundingFailureTests(unittest.TestCase):
+    """Finding 6: a refused mint fell through and ran the work on the stale trusted skill."""
+
+    def test_ungroundable_gap_blocks_execution_on_a_previously_trusted_skill(self) -> None:
+        tmp = TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        registry = Registry(root / "registry")
+        registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(registry, root, "demo-skill")
+        self.assertTrue(registry.is_trusted("demo-skill"))
+
+        worker = _RecordingWorker()
+
+        class _EmptyResearch:
+            def run(self, question: str) -> Digest:
+                return Digest(question=question, citations=())
+
+        loop = SkillLoop(
+            registry=registry,
+            gate=ExerciseGate(registry, root, command=("true",)),
+            research=_EmptyResearch(),
+            worker=worker,
+            gap_detector=lambda _t: MethodGap("q", "r"),
+            skill_writer=lambda _t, _d: "# body",
+        )
+        result = loop.run_step(Task(name="t", description="d", skill="demo-skill"))
+        self.assertFalse(result.executed)
+        self.assertEqual(worker.calls, [], "stale trusted skill must not perform the work")
+        self.assertTrue(any("stale" in n for n in result.notes))
