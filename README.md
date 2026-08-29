@@ -134,11 +134,14 @@ work. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow.
 
 **Representative merged PR:
 [#1, Scaffold the public repo](https://github.com/gocon-loca/trueforge-skill-loop/pull/1).**
-Qodo returned four findings. Three were correctness bugs in code lifted from an earlier
-project: a Make target that could not run because it dropped a required argument, a
-rendered view that fetched a path one directory above where the data was written, and a
-SQLite writer that only upserted, so its table and its JSON snapshot described different
-runs once a later scrape returned fewer records. All three were fixed before merge.
+Qodo returned four findings. Three were correctness bugs, and it is worth being exact
+about where they came from, because this section's argument depends on it. Two were
+introduced by this project while moving quickly: a Make target that could not run because
+the rewrite dropped a required argument, and a rendered view that fetched a path one
+directory above where the data was written, because the file had been moved without
+updating it. The third was inherited: a SQLite writer that only upserted, so its table and
+its JSON snapshot described different runs once a later scrape returned fewer records. All
+three were fixed before merge.
 
 The fourth finding is the one worth reading, because it landed on the centerpiece. Qodo
 observed that the exercise gate was an alias for two existing targets: nothing read a
