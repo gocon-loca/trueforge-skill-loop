@@ -73,3 +73,41 @@ Best score 0.030. **Nothing in the registry answers this**, which is
 the outcome that matters: retrieval has to be able to say no, or every task
 finds a skill and the mint-versus-use decision is never really made.
 
+
+---
+
+## Two embedders, compared, with an unflattering result
+
+`TfidfEmbedder` is the default. `OllamaEmbedder` is opt-in, 768 dimensions from
+`nomic-embed-text`, local, no API key. It was added to fix a specific failure: TF-IDF scores
+a paraphrase at 0.000 because it shares no tokens with the skill that answers it.
+
+Seven cases, four literal, two paraphrases, one out of domain.
+
+| case | TF-IDF | Ollama |
+|---|---|---|
+| four literal task descriptions | 4/4 correct, 0.22 to 0.26 | 4/4 correct, 0.60 to 0.65 |
+| "pull firm details off a rival vendor homepage" | **wrong**, 0.00 | **wrong**, 0.57 |
+| "deduplicate organisations across datasets" | correct, 0.16 | correct, 0.59 |
+| "convert a PDF invoice into a spreadsheet row" | **correctly nothing**, 0.04 | **wrongly something**, 0.42 |
+| **total** | **6/7** | **5/7** |
+
+**The embedder did not fix the case it was added for.** On the paraphrase it scores
+confidently, 0.57, and returns the wrong skill. A higher score on a wrong answer is worse
+than a zero, because a threshold reads it as a match.
+
+**And it lost the case that matters most.** The out-of-domain task is the one that makes the
+mint-versus-use decision real: retrieval has to be able to say nothing here answers this.
+TF-IDF says 0.04. The embedder says 0.42, which on any threshold calibrated for its range
+reads as a match. Semantic similarity is high between any two pieces of text about software,
+so the floor that separates "related" from "answers this" moves and nobody has calibrated it.
+
+**Conclusion, against expectation.** TF-IDF stays the default, not only because it needs no
+model but because on this evidence it is better at the decision the retriever exists to
+inform. The embedder is available, and using it needs thresholds calibrated for its score
+distribution rather than the ones tuned for TF-IDF.
+
+Seven cases is a small sample and neither result should be read as settled. What is settled
+is that swapping the embedder is not a free upgrade, and shipping it as the default on the
+assumption that a real model beats a lexical one would have made retrieval worse while
+looking like an improvement.

@@ -128,6 +128,48 @@ class TfidfEmbedder:
         return {t: v / norm for t, v in vec.items()} if norm else {}
 
 
+class OllamaEmbedder:
+    """Real embeddings from a local model, opt-in. 768 dimensions, no API key, no account.
+
+    Not the default, deliberately. TF-IDF runs on a clean clone with nothing installed, which
+    is the property Q1's acceptance test rests on. This needs a model pulled and a server up,
+    so a caller opts in and gets better matching in exchange for a dependency.
+
+    What it buys is paraphrase. TF-IDF scores "pull firm details off a rival vendor homepage"
+    at 0.000 against the skill that answers it, because it shares no tokens. That is the
+    failure this exists to fix, and the worked example shows both.
+
+    `fit` is a no-op: a pretrained model has nothing to learn from four documents. Vectors are
+    normalised on the way out, because `cosine` here is a dot product and assumes it.
+    """
+
+    def __init__(self, model: str = "nomic-embed-text",
+                 endpoint: str = "http://localhost:11434/v1/embeddings",
+                 timeout: int = 30) -> None:
+        self.model, self.endpoint, self.timeout = model, endpoint, timeout
+
+    def fit(self, documents: list[str]) -> None:
+        return None
+
+    def embed(self, text: str) -> dict[str, float]:
+        import urllib.request
+
+        if not text.strip():
+            return {}
+        body = json.dumps({"model": self.model, "input": text[:4000]}).encode()
+        req = urllib.request.Request(
+            self.endpoint, data=body,
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            vec = json.loads(resp.read())["data"][0]["embedding"]
+        norm = math.sqrt(sum(v * v for v in vec))
+        if not norm:
+            return {}
+        # keyed by index so it shares the sparse-dict shape the protocol uses
+        return {str(i): v / norm for i, v in enumerate(vec)}
+
+
 def cosine(a: dict[str, float], b: dict[str, float]) -> float:
     """Dot product. Correct as cosine ONLY because TfidfEmbedder returns unit vectors.
 

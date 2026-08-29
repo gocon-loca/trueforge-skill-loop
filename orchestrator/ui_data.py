@@ -130,6 +130,113 @@ def build(registry_root: Path | str = "registry",
     }
 
 
+SKILLEARN = Path("ui") / "data" / "skillearn.json"
+
+# The dashboard mock was designed against a different schema than the one built. Adapting the
+# DATA is cheap and adapting the HTML is not, so this emits the mock's exact shape from the
+# same observations, rather than restyling a file that already works.
+_EVENT_TYPE_MAP = {
+    "mint": "mint",
+    "amend": "mint",              # an amend produces a new rule body, which the mock draws as a mint
+    "exercise_pass": "pass",
+    "exercise_fail": "fail",
+    "trust_revoked": "revoke",
+    "retrieval_consultation": None,   # not an event the mock renders; it feeds `consults`
+    "decision": "deviation",
+}
+
+EMB_DIMS = 8
+
+
+def _embedding(rule: dict) -> list:
+    """The mock expects emb[8]. We have observations, not an 8-dimensional vector.
+
+    Real quantities go in the leading slots and the rest are null. Nothing is fabricated to
+    fill the shape: a padded null reads as absent, whereas a zero or a random value would
+    render as a position the rule does not have, which is the same error the null rule in
+    evidence.json exists to prevent, one file over.
+    """
+    observed = [rule.get("x"), rule.get("y"),
+                (rule.get("size") / 10.0) if rule.get("size") else None,
+                1.0 if rule.get("trusted") else 0.0]
+    return observed + [None] * (EMB_DIMS - len(observed))
+
+
+def build_skillearn(registry_root: Path | str = "registry",
+                    events_path: Path | str | None = None) -> dict:
+    """The mock's exact shape, from the same observations evidence.json reports."""
+    data = build(registry_root, events_path)
+    rules = data["rules"]
+    index_of = {r["rule_id"]: i for i, r in enumerate(rules)}
+
+    import yaml
+    hashes = {}
+    for d in sorted(p for p in Path(registry_root).iterdir() if p.is_dir()):
+        mf = d / "meta.yaml"
+        if mf.is_file():
+            m = yaml.safe_load(mf.read_text(encoding="utf-8")) or {}
+            hashes[m.get("name", d.name)] = m.get("exercised_hash")
+
+    out_rules = [{
+        "rule_id": r["rule_id"],
+        "skill": r["skill"],
+        "text": r["text"],
+        "provenance": r["provenance"],
+        "trusted": r["trusted"],
+        "version": r["version"],
+        "consults": r["size"],                  # null when never consulted, per the null rule
+        "citations": r["citations"],
+        "exercised_hash": hashes.get(r["skill"]),
+        "emb": _embedding(r),
+    } for r in rules]
+
+    events = []
+    for e in read_events(events_path) if events_path else read_events():
+        mapped = _EVENT_TYPE_MAP.get(e["event_type"])
+        if not mapped:
+            continue
+        rid = e.get("rule_id")
+        idx = index_of.get(rid) if rid else None
+        if idx is None and e.get("skill"):
+            # skill-level event: attribute to that skill's first rule, and say so in the file
+            for r_id, i in index_of.items():
+                if r_id.startswith(f"{e['skill']}#"):
+                    idx = i
+                    break
+        events.append({
+            "t": e["ts"],
+            "type": mapped,
+            "idx": idx,
+            "score": (e.get("payload") or {}).get("score"),
+        })
+
+    return {
+        "note": (
+            "Emitted for the dashboard mock's schema. emb[8] carries observed quantities in "
+            "its leading slots and null in the rest; the dimensions are not a learned "
+            "embedding and no value is invented to fill the shape. consults is null, never "
+            "zero, where a rule has never been consulted. An event whose idx is a skill-level "
+            "attribution points at that skill's first rule, because retrieval and exercise "
+            "observe skills rather than individual rules."
+        ),
+        "emb_dims": EMB_DIMS,
+        "emb_meaning": ["mean_retrieval_score", "exercise_pass_rate",
+                        "consult_count_over_10", "trusted", None, None, None, None],
+        "rules": out_rules,
+        "events": events,
+    }
+
+
+def write_skillearn(registry_root: Path | str = "registry",
+                    path: Path | str = SKILLEARN,
+                    events_path: Path | str | None = None) -> dict:
+    data = build_skillearn(registry_root, events_path)
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return data
+
+
 def write(registry_root: Path | str = "registry", path: Path | str = EVIDENCE,
           events_path: Path | str | None = None) -> dict:
     data = build(registry_root, events_path)
@@ -144,11 +251,14 @@ if __name__ == "__main__":
 
     total = write_backfill()
     d = write()
+    sk = write_skillearn()
     c = d["counts"]
     print(f"  events.jsonl:  {total} records after backfill")
     print(f"  evidence.json: {c['rules']} rules, "
           f"{c['rules_with_retrieval_observations']} with retrieval observations, "
           f"{c['rules_without']} without")
+    print(f"  skillearn.json: {len(sk['rules'])} rules, {len(sk['events'])} events "
+          f"in the dashboard mock's shape")
     if c["rules_without"]:
         print(f"  {c['rules_without']} rules carry null for x and size. That is correct today: "
               f"they have not been consulted, and a number there would be invented.")
