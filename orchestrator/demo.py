@@ -36,6 +36,11 @@ TASKS = {
         description="link records across public sources into an interconnection graph",
         skill="public-source-entity-linking",
     ),
+    "workspace-sentinel": Task(
+        name="workspace/coordinate",
+        description="coordinate a shared workspace and report peer state to an operator",
+        skill="workspace-sentinel",
+    ),
 }
 
 
@@ -62,6 +67,7 @@ def build_loop(spec: SkillSpec, registry: Registry, worker, command) -> SkillLoo
         gap_detector=spec.detect_gap,
         skill_writer=spec.write_skill,
         skill_files=spec.files,
+        minted_from=spec.minted_from,
     )
 
 

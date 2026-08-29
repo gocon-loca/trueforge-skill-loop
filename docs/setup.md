@@ -144,7 +144,7 @@ make deps
 make demo
 ```
 
-`make demo` mints two skills from two different method gaps, exercises each against its own
+`make demo` mints three skills from three different method gaps, exercises each against its own
 verification, and then attempts work. It is worth watching for what it refuses: a skill
 whose verification fails stays untrusted, and execution is blocked rather than proceeding on
 an unexercised skill. The run prints that refusal as an outcome, because a gate that is

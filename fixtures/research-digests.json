@@ -60,5 +60,81 @@
         "method_rule": "Block candidates on a cheap key before pairwise comparison, so comparison cost stays tractable and unrelated records are never compared in the first place."
       }
     ]
+  },
+  "What does a workspace coordination agent have to do so that its reports can be relied on?": {
+    "citations": [
+      {
+        "key": "channel-read-first",
+        "title": "Directive queued to the shared inbox, unread for 28 minutes while status flowed outward",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=gap",
+        "year": 2026,
+        "identifier": "companion.jsonl@12:52:30 and @13:12:59",
+        "method_rule": "Read the inbound channel before doing anything else on a tick. A coordination agent that writes status outward while never reading inbound has wired half a channel and will report itself healthy while directives sit unread."
+      },
+      {
+        "key": "receipt-before-processing",
+        "title": "Acknowledge on receipt, then answer, so the sender knows the message landed before the work is done",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=receipt",
+        "year": 2026,
+        "identifier": "companion.jsonl@14:07:07",
+        "method_rule": "Acknowledge an inbound message the moment it is seen, before processing it. Silence between arrival and completed work is indistinguishable from not having received it."
+      },
+      {
+        "key": "acknowledged-not-applied",
+        "title": "A receipt appeared while the directive it acknowledged remained unapplied",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=watchdog",
+        "year": 2026,
+        "identifier": "companion.jsonl@13:58:16",
+        "method_rule": "A delivery receipt is not application. Track directives to the observable effect they were supposed to cause, and treat acknowledged-but-not-applied as still open."
+      },
+      {
+        "key": "watchdog-on-new-information",
+        "title": "Idle threshold tripped and escalation was deliberately withheld because the content would have been identical",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=watchdog",
+        "year": 2026,
+        "identifier": "companion.jsonl@14:04:41",
+        "method_rule": "Escalate on new information, not on a timer alone. Re-sending identical content because a threshold elapsed again is noise, and it trains the recipient to ignore the channel. Send a duration update instead of a repeat."
+      },
+      {
+        "key": "absent-signal-is-not-evidence",
+        "title": "A liveness signal was unavailable rather than negative, and was not treated as evidence of death",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=watchdog",
+        "year": 2026,
+        "identifier": "companion.jsonl@13:58:16",
+        "method_rule": "Distinguish a signal that is absent from a signal that is negative. An unavailable liveness probe is missing evidence, not evidence of failure, and must not be reported as one."
+      },
+      {
+        "key": "verify-before-relaying",
+        "title": "A scanner alert was checked against the filesystem before being relayed, and proved to be its own false positive",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=false_positive",
+        "year": 2026,
+        "identifier": "companion.jsonl@13:13:51",
+        "method_rule": "Verify a claim against the underlying artefact before relaying it. A case-insensitive pattern matched a lowercase commit hash and would have been reported as a boundary violation had it been passed on unchecked."
+      },
+      {
+        "key": "never-confirm-without-evidence",
+        "title": "An earlier conclusion was publicly corrected when its evidence turned out to be weaker than presented",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=self_correction",
+        "year": 2026,
+        "identifier": "companion.jsonl@13:58:16 and @14:01:48",
+        "method_rule": "Never confirm what cannot be evidenced, and state the strength of the evidence alongside the claim. Where a conclusion survives but its basis was overstated, correct the basis rather than leaving the conclusion propped on it."
+      },
+      {
+        "key": "escalate-then-default",
+        "title": "Holding a merged defect after flagging it once was recorded as the wrong call",
+        "authors": "companion session, operational record",
+        "venue": "companion.jsonl, kind=escalation and kind=policy_change",
+        "year": 2026,
+        "identifier": "companion.jsonl@13:23:46 and @13:25:44",
+        "method_rule": "Flagging once and then holding is not escalation. Escalate a blocked decision with a stated default at 15 minutes, and apply the default at 30 unless the action is irreversible or external-facing, which waits indefinitely."
+      }
+    ]
   }
 }

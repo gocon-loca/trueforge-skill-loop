@@ -28,6 +28,7 @@ class SkillSpec:
     constraints: str
     verify_template: str
     verify_summary: str
+    minted_from: str = "research"
 
     def detect_gap(self, task: Task) -> MethodGap | None:
         if self.trigger in task.description:
@@ -137,4 +138,45 @@ ENTITY_LINKING = SkillSpec(
     ),
 )
 
-ALL_SKILLS = (SITE_INTERPRETATION, ENTITY_LINKING)
+WORKSPACE_SENTINEL = SkillSpec(
+    name="workspace-sentinel",
+    description=(
+        "Coordinate a shared workspace so that reports from it can be relied on: read "
+        "inbound before acting, acknowledge on receipt, watch a peer for silence, verify "
+        "claims against artefacts before relaying them, and escalate on a stated clock. "
+        "Load before running any agent that watches others and reports what it sees."
+    ),
+    trigger="coordinate",
+    gap_question=(
+        "What does a workspace coordination agent have to do so that its reports can be "
+        "relied on?"
+    ),
+    gap_rationale=(
+        "A coordination agent's output is consumed as fact by whoever reads it, so its "
+        "failures are silent: a missed directive, an unchecked relay, or an alarm raised "
+        "on an absent signal all look like normal operation. The rules are worth settling "
+        "before it is trusted to watch anything."
+    ),
+    applies_when=(
+        "Before instantiating an agent whose job is to watch other agents, relay their "
+        "state to a person, and hold directives on their behalf. Also whenever such an "
+        "agent has reported something that turned out not to be so, since that is the "
+        "signal one of these rules is missing."
+    ),
+    constraints=(
+        "Never relay a claim that has not been checked against the underlying artefact. "
+        "Never treat an unavailable signal as a negative one. Never let elapsed time "
+        "convert into permission for an action that cannot be taken back. Do not act on "
+        "an operator's behalf beyond a stated default, and never at all where the action "
+        "is irreversible or external-facing."
+    ),
+    verify_template="verify_workspace_sentinel.py",
+    verify_summary=(
+        "A pass means the encoded policy reproduces the decisions actually taken in the "
+        "record it was extracted from, including the two cases where the refined rule "
+        "differs from the naive one."
+    ),
+    minted_from="incident",
+)
+
+ALL_SKILLS = (SITE_INTERPRETATION, ENTITY_LINKING, WORKSPACE_SENTINEL)

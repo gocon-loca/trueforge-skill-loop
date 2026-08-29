@@ -75,6 +75,7 @@ class SkillLoop:
         gap_detector: GapDetector,
         skill_writer: Callable[[Task, Digest], str],
         skill_files: Callable[[], dict[str, str]] | None = None,
+        minted_from: str = "research",
         max_depth: int = MAX_RESEARCH_DEPTH,
     ) -> None:
         self.registry = registry
@@ -84,6 +85,7 @@ class SkillLoop:
         self.gap_detector = gap_detector
         self.skill_writer = skill_writer
         self.skill_files = skill_files
+        self.minted_from = minted_from
         self.max_depth = max_depth
 
     def run_step(self, task: Task, depth: int = 0) -> StepResult:
@@ -107,6 +109,7 @@ class SkillLoop:
                     digest,
                     self.skill_writer(task, digest),
                     extra_files=self.skill_files() if self.skill_files else None,
+                    minted_from=self.minted_from,
                 )
                 result.minted = True
             except UngroundedSkillError as exc:

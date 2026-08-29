@@ -81,13 +81,13 @@ def validate_trust_state(meta: "SkillMeta") -> None:
         )
     if meta.version < 1:
         raise InvalidTrustStateError(f"skill {meta.name!r} has non-positive version {meta.version}")
-    if meta.minted_from not in {"research", "manual"}:
+    if meta.minted_from not in {"research", "manual", "incident"}:
         raise InvalidTrustStateError(
             f"skill {meta.name!r} has unknown minted_from {meta.minted_from!r}"
         )
-    if meta.minted_from == "research" and meta.citations < 1:
+    if meta.minted_from in {"research", "incident"} and meta.citations < 1:
         raise InvalidTrustStateError(
-            f"skill {meta.name!r} claims research provenance but cites nothing"
+            f"skill {meta.name!r} claims {meta.minted_from} provenance but cites nothing"
         )
 
 
@@ -376,6 +376,7 @@ class Registry:
         digest: Digest,
         skill_body: str,
         extra_files: dict[str, str] | None = None,
+        minted_from: str = "research",
     ) -> SkillMeta:
         """Write a skill pack from a research digest. Always lands untrusted."""
         if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
@@ -431,7 +432,7 @@ class Registry:
         meta = SkillMeta(
             name=name,
             version=previous_version + 1,
-            minted_from="research",
+            minted_from=minted_from,
             exercised=False,
             exercised_at=None,
             exercised_by=None,

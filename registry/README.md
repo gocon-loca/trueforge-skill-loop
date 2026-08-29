@@ -15,7 +15,7 @@ directory containing:
 ```yaml
 name: competitor-site-interpretation   # directory name, kebab-case
 version: 1                             # integer, bumped on re-mint
-minted_from: research                  # research | manual
+minted_from: research                  # research | incident | manual
 exercised: false                       # see the exercise gate below
 exercised_at: null                     # ISO-8601 UTC when it passed
 exercised_by: null                     # command that constituted the passing run
@@ -32,6 +32,11 @@ A skill is verified by its own `verify.py`, invoked as `make verify-skill SKILL=
 A skill that declares no verification, or ships no `verify.py`, cannot be exercised and so
 cannot become trusted. Verification that exercises the surrounding machinery rather than
 the skill's own method is not verification of that skill.
+
+`minted_from: incident` marks a skill whose rules were extracted from an operational
+record rather than from literature. It carries the same obligation as `research`: every rule
+traces to a cited source, and here the source is a logged event rather than a paper. A skill
+that claims either provenance and cites nothing is rejected.
 
 `exercised_hash` is what makes the flag mean something. Recording that a run passed,
 without recording what passed, lets an edit keep the flag: the metadata still says trusted
