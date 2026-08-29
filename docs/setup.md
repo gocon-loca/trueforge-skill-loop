@@ -17,9 +17,8 @@ make exercise   # tests plus the offline pipeline path. No install, no credentia
 To also run the full loop, which needs one dependency:
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-make demo PYTHON=.venv/bin/python
+make deps
+make demo
 ```
 
 `make exercise` needs nothing installed and no credentials at all. `make demo` runs the
@@ -53,18 +52,16 @@ so treat 3.11 as the safe number and 3.10 as probable.
 
 The orchestrator needs PyYAML. The pipeline needs nothing.
 
-Install into a virtual environment, then point `make` at it:
-
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-make demo PYTHON=.venv/bin/python
+make deps
 ```
 
-There is a `make deps` target, but on a recent macOS or Homebrew Python it fails with
-`error: externally-managed-environment`, because PEP 668 forbids installing into a system
-Python. The virtual environment above is the portable route and works regardless.
-`.venv/` is already gitignored.
+`make deps` builds a virtual environment in `.venv` and installs into it. Every other
+target then picks that interpreter up automatically, so there is nothing to activate and
+no flag to pass. It does not pip install into your system Python, which recent macOS and
+Homebrew builds refuse under PEP 668. `.venv/` is gitignored.
+
+Override with `PYTHON=...` if you would rather use your own interpreter.
 
 ## Running the pipeline offline
 
@@ -72,8 +69,9 @@ Python. The virtual environment above is the portable route and works regardless
 make test       # unit tests, no network
 make fixture    # deterministic pipeline run against a committed fixture
 make exercise   # both, in the order the trust gate requires
+make map        # build the interconnection graph
 make serve      # then open http://localhost:8000/map/board.html
-make demo       # the full loop, after the virtual environment step above
+make demo       # the full loop, after make deps
 ```
 
 `make fixture` reads `fixtures/brightdata-papers.json` and publishes to `data/papers.json`
@@ -142,9 +140,8 @@ checklist is in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 ## Seeing the whole loop
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-make demo PYTHON=.venv/bin/python
+make deps
+make demo
 ```
 
 `make demo` mints two skills from two different method gaps, exercises each against its own
