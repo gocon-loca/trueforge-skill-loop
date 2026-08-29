@@ -26,9 +26,10 @@ import os
 from html.parser import HTMLParser
 from pathlib import Path
 
-FIXTURE = Path(
-    os.environ.get("SKILL_FIXTURE", "fixtures/site-interpretation-known-answers.json")
-)
+# Ships inside the skill directory so `exercised_hash` covers it. A known-answer fixture
+# kept outside that directory is load-bearing for the gate and outside the trust binding.
+SKILL_DIR = Path(os.environ.get("SKILL_REGISTRY", "registry")) / os.environ["SKILL_NAME"]
+FIXTURE = SKILL_DIR / "fixture.json"
 
 data = json.loads(FIXTURE.read_text(encoding="utf-8"))
 FACTS = data["facts"]

@@ -24,10 +24,13 @@ not a published benchmark with adjudicated labels, and it says so in its own pro
 
 import json
 import os
-from itertools import combinations
 from pathlib import Path
 
-FIXTURE = Path(os.environ.get("SKILL_FIXTURE", "fixtures/entity-linking-known-answers.json"))
+# The fixture ships inside the skill directory, so `exercised_hash` covers it. A
+# known-answer fixture kept outside that directory is load-bearing for the gate and outside
+# the trust binding: the expected answer could be edited while the skill stayed trusted.
+SKILL_DIR = Path(os.environ.get("SKILL_REGISTRY", "registry")) / os.environ["SKILL_NAME"]
+FIXTURE = SKILL_DIR / "fixture.json"
 
 data = json.loads(FIXTURE.read_text(encoding="utf-8"))
 records = data["records"]
@@ -64,19 +67,42 @@ def union_find(ids, edges):
 # --- the method under test, exactly as the skill states it -------------------------
 
 def link_verified(records, matches, floor):
-    """[transitive-closure-collapse] a link below the floor may not join clusters.
-    [linkage-uncertainty] the score is carried into the decision, not discarded."""
+    """The method, with all three rules inside it.
+
+    [blocking-before-comparison] candidates are blocked before any pair is considered, so a
+    cross-block pair is never compared. This is part of the method rather than a statistic
+    computed beside it: an earlier version asserted a comparison count from a helper the
+    method never called, which tested the helper.
+    [transitive-closure-collapse] a link below the floor may not join clusters.
+    [linkage-uncertainty] the score is carried into the decision rather than discarded.
+
+    Returns the clusters and the number of pairs actually compared.
+    """
     ids = [r["id"] for r in records]
-    edges = [(m["left"], m["right"]) for m in matches if m["confidence"] >= floor]
-    return union_find(ids, edges)
+    block_of = {r["id"]: r["block"] for r in records}
+
+    considered = 0
+    edges = []
+    for m in matches:
+        if block_of[m["left"]] != block_of[m["right"]]:
+            continue          # blocked out: never compared
+        considered += 1
+        if m["confidence"] >= floor:
+            edges.append((m["left"], m["right"]))
+    return union_find(ids, edges), considered
 
 
-def comparisons_with_blocking(records):
-    """[blocking-before-comparison] compare only within a block."""
-    blocks = {}
-    for r in records:
-        blocks.setdefault(r["block"], []).append(r["id"])
-    return sum(len(list(combinations(v, 2))) for v in blocks.values())
+def link_without_blocking(records, matches, floor):
+    """Mutant: compares every pair regardless of block. Violates
+    [blocking-before-comparison]."""
+    ids = [r["id"] for r in records]
+    considered = 0
+    edges = []
+    for m in matches:
+        considered += 1
+        if m["confidence"] >= floor:
+            edges.append((m["left"], m["right"]))
+    return union_find(ids, edges), considered
 
 
 # --- mutants: each violates one cited rule and must be caught ----------------------
@@ -87,17 +113,25 @@ def mutant_naive_closure(records, matches):
     return union_find(ids, [(m["left"], m["right"]) for m in matches])
 
 
-def mutant_boolean_edges(records, matches):
-    """Treats any match above a token threshold as equal evidence, discarding uncertainty,
-    which is what [linkage-uncertainty] warns against."""
+def mutant_guessed_threshold(records, matches):
+    """Substitutes a guessed cutoff for the calibrated floor, which is what
+    [linkage-uncertainty] warns against: the score stops being carried into the decision and
+    becomes a boolean above a number somebody picked.
+
+    Deliberately 0.60 rather than 0.40. At 0.40 every sub-floor link is admitted and the
+    result is identical to naive closure, so the two mutants would be the same mutant and
+    catching one would say nothing about the other. At 0.60 exactly one wrong link is
+    admitted, giving an outcome distinct from both the correct answer and naive closure.
+    """
     ids = [r["id"] for r in records]
-    edges = [(m["left"], m["right"]) for m in matches if m["confidence"] > 0.4]
+    edges = [(m["left"], m["right"]) for m in matches if m["confidence"] > 0.60]
     return union_find(ids, edges)
 
 
 # --- 1. the method reproduces the independently stated answer ----------------------
 
-actual = normalise(link_verified(records, matches, CONFIDENCE_FLOOR))
+clusters, compared = link_verified(records, matches, CONFIDENCE_FLOOR)
+actual = normalise(clusters)
 want = normalise(expected["clusters"])
 assert actual == want, (
     f"method did not reproduce the known answer.\n  expected: {want}\n  actual:   {actual}"
@@ -126,23 +160,37 @@ assert len(naive) == data["expected_under_naive_closure"]["cluster_count"], (
     f"{data['expected_under_naive_closure']['cluster_count']} cluster(s), got {len(naive)}"
 )
 
-boolean = normalise(mutant_boolean_edges(records, matches))
-assert boolean != want, (
-    "the boolean-edge mutant produced the correct answer, so this fixture cannot detect "
-    "uncertainty being discarded"
+guessed = normalise(mutant_guessed_threshold(records, matches))
+assert guessed != want, (
+    "the guessed-threshold mutant produced the correct answer, so this fixture cannot "
+    "detect a calibrated floor being replaced by a guess"
+)
+assert guessed != naive, (
+    f"the guessed-threshold mutant and the naive-closure mutant produced the same result "
+    f"({guessed}), so they are one mutant wearing two names and catching them both "
+    f"establishes only one thing"
 )
 
 # --- 3. blocking is applied, and the saving is the stated one ----------------------
 
-all_pairs = len(list(combinations([r["id"] for r in records], 2)))
-blocked = comparisons_with_blocking(records)
-assert all_pairs == data["expected_under_no_blocking"]["comparisons"], (
-    f"fixture says {data['expected_under_no_blocking']['comparisons']} unblocked "
-    f"comparisons, computed {all_pairs}"
+# the count comes from the method itself, not from a helper beside it
+_, unblocked_compared = link_without_blocking(records, matches, CONFIDENCE_FLOOR)
+assert compared < unblocked_compared, (
+    f"the method compared {compared} pairs and the unblocked mutant compared "
+    f"{unblocked_compared}; blocking is not reducing anything"
 )
-assert blocked < all_pairs, "blocking did not reduce the comparison count"
+cross_block = sum(
+    1 for m in matches
+    if {r["id"]: r["block"] for r in records}[m["left"]]
+    != {r["id"]: r["block"] for r in records}[m["right"]]
+)
+assert unblocked_compared - compared == cross_block, (
+    f"the method should skip exactly the {cross_block} cross-block pairs, "
+    f"skipped {unblocked_compared - compared}"
+)
+assert cross_block > 0, "no cross-block pairs in the fixture, so blocking is untested"
 
 print(f"  known answer reproduced: {len(actual)} clusters, matching the registration field")
 print(f"  naive closure caught: collapses to {len(naive)} cluster(s), not {len(want)}")
-print(f"  boolean-edge mutant caught: {len(boolean)} cluster(s) instead of {len(want)}")
-print(f"  blocking: {blocked} comparisons instead of {all_pairs}")
+print(f"  guessed-threshold mutant caught: {len(guessed)} cluster(s), distinct from both")
+print(f"  blocking inside the method: {compared} pairs compared, {cross_block} skipped")

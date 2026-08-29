@@ -1,8 +1,8 @@
 name: public-source-entity-linking
-version: 2
+version: 3
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T22:18:07.445420Z'
+exercised_at: '2026-08-29T22:33:03.693001Z'
 exercised_by: make verify-skill SKILL=public-source-entity-linking
-exercised_hash: df6bde417d3b7e4429e8a53449f6e25330cada28206b9b1bf0c1bcdad5324cb3
+exercised_hash: 5ed1377b4bd52ca651f3b386141124b52ab96ecded470dcdd8ec2ff789229177
 citations: 3

@@ -1,0 +1,39 @@
+{
+  "fixture": "site-interpretation-known-answers",
+  "for_skill": "competitor-site-interpretation",
+  "provenance": {
+    "ground_truth_source": "The `facts` block below. It states what each page says, as data, before any extractor runs. The `layouts` are three renderings of those same facts, differing only in arrangement and decoration. The correct answer is `facts`, and it is not produced by parsing anything.",
+    "why_this_matters": "Expected output computed by running the extractor proves the extractor agrees with itself. Here the answer is written first and the pages are built to carry it, so an extractor that reads the page differently from how the page was built will disagree with the answer rather than define it.",
+    "known_limits": "Three hand-built pages, not a corpus of real sites. This establishes that the method is invariant to arrangement and that readers which are not invariant get caught. It does not establish that the method survives real-world markup."
+  },
+  "facts": {
+    "name": "Acme Systems",
+    "hq": "Berlin",
+    "founded": "2019"
+  },
+  "layouts": [
+    {
+      "id": "plain",
+      "note": "Facts in reading order, no decoration.",
+      "html": "<main><section id=\"company\"><h1 data-field=\"name\">Acme Systems</h1><p data-field=\"hq\">Berlin</p><p data-field=\"founded\">2019</p></section></main>"
+    },
+    {
+      "id": "reordered-with-banner",
+      "note": "Same facts, reordered, with a decorative banner injected first. A reader keyed on document position now sees the banner where the name was.",
+      "html": "<main><aside class=\"banner\">Sponsored</aside><section id=\"company\"><p data-field=\"founded\">2019</p><p data-field=\"hq\">Berlin</p><h1 data-field=\"name\">Acme Systems</h1></section></main>"
+    },
+    {
+      "id": "visually-promoted-decoration",
+      "note": "Same facts again, but the decoration is now the most visually prominent element: it is the h1, and the company name is a plain span. A reader that treats visual salience as evidence of importance picks the wrong thing.",
+      "html": "<main><h1 class=\"hero\">Award Winning</h1><section id=\"company\"><span data-field=\"name\">Acme Systems</span><span data-field=\"hq\">Berlin</span><span data-field=\"founded\">2019</span></section></main>"
+    }
+  ],
+  "expected_under_positional_reader": {
+    "note": "A reader taking the first non-empty text block returns 'Acme Systems' on the plain layout and 'Sponsored' on the reordered one, so it is not invariant and must be caught.",
+    "differs_across_layouts": true
+  },
+  "expected_under_salience_reader": {
+    "note": "A reader taking the h1 as the name returns 'Acme Systems' on the plain layout and 'Award Winning' on the visually-promoted one, so it is not invariant and must be caught.",
+    "differs_across_layouts": true
+  }
+}
