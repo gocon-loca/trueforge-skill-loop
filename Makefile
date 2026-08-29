@@ -1,5 +1,5 @@
 PYTHON ?= python3
-.PHONY: deps demo verify-skill fixture scrape exercise serve test clean
+.PHONY: deps demo trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -42,3 +42,8 @@ demo:
 verify-skill:
 	@test -n "$(SKILL)" || { echo "SKILL=<name> is required" >&2; exit 2; }
 	$(PYTHON) -m orchestrator.verify_skill $(SKILL)
+
+# Register this registry with a running TrueForge instance. No credentials:
+# the repository is public, so TrueForge fetches the packs itself.
+trueforge-skills:
+	$(PYTHON) scripts/register_skills.py

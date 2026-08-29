@@ -21,8 +21,8 @@ The loop this project runs, per work step:
 3. **Research.** If yes, it dispatches a research task and produces a digest with full
    citations and extracted method rules.
 4. **Mint.** The digest becomes a `SKILL.md` pack with its citations, committed to the
-   skill registry. The registry is laid out as a git-backed skill source in the format
-   TrueForge reads.
+   skill registry, which TrueForge reads as a git-backed skill source. See
+   [Registering the registry with TrueForge](#registering-the-registry-with-trueforge).
 5. **Exercise gate.** The minted skill is untrusted. `exercised: false -> true` happens
    only on a passing run.
 6. **Execute.** The work runs using the now-trusted skill.
@@ -60,12 +60,56 @@ make serve   # then open http://localhost:8000/map/board.html
 
 Copy `.env.example` to `.env` for live acquisition. Never commit `.env`.
 
+## Registering the registry with TrueForge
+
+TrueForge reads skills as git-backed `SKILL.md` packs. This repository is public, so
+registering it needs no credentials: the manifest carries an HTTPS URL, a path and a ref,
+and TrueForge fetches the packs itself.
+
+```sh
+npx @truefoundry/trueforge     # starts the harness
+make trueforge-skills          # registers every pack in registry/
+```
+
+TrueForge then reports them:
+
+```sh
+curl -s 'http://[::1]:8790/api/v1/skills'
+```
+
+```json
+{"data": [
+  {"name": "competitor-site-interpretation", "description": "Interpret a public site ..."},
+  {"name": "public-source-entity-linking",   "description": "Link entities across ..."}
+]}
+```
+
+Registration is idempotent, so re-running it after a re-mint is safe.
+
+Note on the address. TrueForge binds IPv6 loopback, so `http://127.0.0.1:8790` returns
+nothing while `http://[::1]:8790` works. `lsof -nP -iTCP:8790 -sTCP:LISTEN` shows the bind
+address if you need to check.
+
+### What this does and does not show
+
+It shows that a skill this project minted, with its citations and its trust record, is
+visible to TrueForge as a skill it could load. That is the part of the claim this
+repository can demonstrate on its own.
+
+It does not show an agent using one inside a session. A TrueForge session needs a
+configured model provider, and skills additionally need a configured sandbox provider.
+Both take operator credentials that are not in this repository and should not be. On an
+instance without them, `/api/v1/settings/model-providers` returns an empty list and
+`/api/v1/settings/sandbox-providers` reports that none is configured, while the skills
+above still register and list correctly.
+
 ## Repository contents
 
 | Path | What it is |
 |---|---|
 | `pipeline/` | Acquisition, normalization, and scoring. Standard library only. |
 | `orchestrator/` | The loop: gap check, research adapter, registry, exercise gate. |
+| `scripts/` | Registering the skill registry with a running TrueForge instance. |
 | `registry/` | Git-backed skill packs in the format TrueForge reads, with the gate schema. |
 | `config/` | Collector behaviour and drift thresholds, versioned rather than passed ad hoc. |
 | `fixtures/` | Deterministic payloads the offline path and the exercise gate run against. |
