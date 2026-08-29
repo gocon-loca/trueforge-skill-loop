@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "collectors": {
+    "competitor-sites": {
+      "description": "Public marketing and product pages for mapped organizations.",
+      "collector_id_env": "BRIGHTDATA_COLLECTOR_ID",
+      "targets": [],
+      "target_policy": {
+        "public_pages_only": true,
+        "respect_robots_txt": true,
+        "denied_hosts": ["linkedin.com", "www.linkedin.com"],
+        "deny_authenticated_pages": true,
+        "deny_personal_contact_data": true
+      },
+      "required_fields": ["url", "org", "title", "description"],
+      "drift": {
+        "min_records": 1,
+        "max_missing_field_ratio": 0.25,
+        "min_mean_field_length": 8
+      },
+      "on_drift": "revoke-and-remint"
+    }
+  }
+}
