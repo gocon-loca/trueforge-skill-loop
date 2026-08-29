@@ -1,5 +1,5 @@
 PYTHON ?= python3
-.PHONY: deps fixture scrape exercise serve test clean
+.PHONY: deps demo fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -33,3 +33,7 @@ test:
 
 clean:
 	rm -f data/papers.db data/papers.json artifacts/raw-scrape.json
+
+# The loop end to end, offline. No credentials, no operator keys.
+demo:
+	$(PYTHON) -m orchestrator.demo
