@@ -252,7 +252,7 @@ ones where review changed the design rather than the wording.
 | [#3](https://github.com/gocon-loca/trueforge-skill-loop/pull/3) | Drift-check division guarded at each point of use rather than only at load |
 | [#4](https://github.com/gocon-loca/trueforge-skill-loop/pull/4) | The enforcement path for #1's fourth finding: ticket-bound trust, path traversal, truthy `"false"`, write ordering, launch failures |
 | [#10](https://github.com/gocon-loca/trueforge-skill-loop/pull/10) | `make deps` failed on any clean machine under PEP 668, at the first install step a reader runs |
-| [#11](https://github.com/gocon-loca/trueforge-skill-loop/pull/11) | `main` was broken for twelve minutes by committed conflict markers |
+| [#11](https://github.com/gocon-loca/trueforge-skill-loop/pull/11) | `main` was broken for 86 seconds by committed conflict markers, caught and repaired before anyone cloned it |
 | [#15](https://github.com/gocon-loca/trueforge-skill-loop/pull/15) | Smoke tests replaced by known answers; fixtures moved inside the trust hash; a threshold that claimed to be a verified merge |
 | [#16](https://github.com/gocon-loca/trueforge-skill-loop/pull/16) | Version injectivity made a check rather than a rule, after the same defect recurred three times |
 
