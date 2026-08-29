@@ -1,8 +1,8 @@
 name: competitor-site-interpretation
-version: 1
+version: 2
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T20:12:46.109378Z'
+exercised_at: '2026-08-29T22:20:10.228452Z'
 exercised_by: make verify-skill SKILL=competitor-site-interpretation
-exercised_hash: 497589d389f20934227d4df7ef76dcbb065fc56398216897761698f5b67e28d2
+exercised_hash: ee9cd0ac1ce1638e38a1ecbc0deddeb06de853380b7a0ba6c51244d6653b7645
 citations: 3

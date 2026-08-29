@@ -1,28 +1,42 @@
-"""Verification for competitor-site-interpretation.
+"""Verification for competitor-site-interpretation: known answers, not a smoke test.
 
-Exercises the skill's own method rules rather than the surrounding pipeline. The claim
-under test is [web-for-agents] and [webvoyager]: an agent targeting semantic structure
-survives a change in visual arrangement, and one reading position does not.
+The earlier version asserted that two layouts extracted alike and a positional reader did
+not. Both the extractor and its expected output were written here from the same
+understanding, so it showed self-consistency: the answer was whatever the extractor produced.
 
-A failure here means the skill does not encode the method it cites, so it must not be
-trusted to perform work.
+Two changes make it a known-answer check.
+
+**The answer is written before anything parses.** The fixture states the facts each page
+carries, as data, and the layouts are three renderings of those same facts differing only in
+arrangement and decoration. An extractor that reads a page differently from how the page was
+built disagrees with the answer rather than defining it.
+
+**The fixture is shown capable of failing.** Two mutant readers each violate a cited rule and
+each must be caught. One takes the first text block, which [webvoyager] warns about since
+position is not presence. One takes the most visually prominent element, which
+[web-for-agents] warns about since the human-facing rendering is not the agent-facing
+interface. A fixture that cannot detect a broken reader is not a test.
+
+What this still does not establish: survival on real markup. Three hand-built pages are not a
+corpus, and the fixture says so in its own provenance.
 """
 
+import json
+import os
 from html.parser import HTMLParser
+from pathlib import Path
 
-# The same facts in two layouts. The second reorders them and injects a decorative banner
-# first, so a reader keyed on visual position now sees the banner where the name was.
-SAME_FACTS_TWO_LAYOUTS = [
-    '<main><section id="company"><h1 data-field="name">Acme</h1>'
-    '<p data-field="hq">Berlin</p></section></main>',
-    '<main><aside class="banner">Sponsored</aside>'
-    '<section id="company"><p data-field="hq">Berlin</p>'
-    '<h1 data-field="name">Acme</h1></section></main>',
-]
+FIXTURE = Path(
+    os.environ.get("SKILL_FIXTURE", "fixtures/site-interpretation-known-answers.json")
+)
+
+data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+FACTS = data["facts"]
+LAYOUTS = data["layouts"]
 
 
 class StructuralExtractor(HTMLParser):
-    """Targets declared semantic anchors, per the cited method rules."""
+    """The method: target declared semantic anchors, per the cited rules."""
 
     def __init__(self):
         super().__init__()
@@ -40,8 +54,8 @@ class StructuralExtractor(HTMLParser):
         self._current = None
 
 
-class PositionalExtractor(HTMLParser):
-    """The method the literature warns against: first rendered text block wins."""
+class PositionalReader(HTMLParser):
+    """Mutant: first non-empty text block wins. Position treated as presence."""
 
     def __init__(self):
         super().__init__()
@@ -52,23 +66,73 @@ class PositionalExtractor(HTMLParser):
             self.first = data.strip()
 
 
-def _run(cls, html):
+class SalienceReader(HTMLParser):
+    """Mutant: the h1 is the name. Visual prominence treated as importance."""
+
+    def __init__(self):
+        super().__init__()
+        self.heading = None
+        self._in_h1 = False
+
+    def handle_starttag(self, tag, attrs):
+        self._in_h1 = tag == "h1"
+
+    def handle_data(self, data):
+        if self._in_h1 and self.heading is None and data.strip():
+            self.heading = data.strip()
+
+    def handle_endtag(self, tag):
+        if tag == "h1":
+            self._in_h1 = False
+
+
+def run(cls, html):
     parser = cls()
     parser.feed(html)
     return parser
 
 
-structural = [_run(StructuralExtractor, h).fields for h in SAME_FACTS_TWO_LAYOUTS]
-assert structural[0] == structural[1], (
-    f"structural extraction must not depend on visual order: {structural}"
-)
-assert structural[0] == {"name": "Acme", "hq": "Berlin"}, structural[0]
+# --- 1. the method reproduces the stated facts, on every layout --------------------
 
-positional = [_run(PositionalExtractor, h).first for h in SAME_FACTS_TWO_LAYOUTS]
-assert positional[0] != positional[1], (
-    "the positional reader was expected to diverge under reordering; if it did not, this "
-    "fixture no longer demonstrates why the method rule exists"
+for layout in LAYOUTS:
+    got = run(StructuralExtractor, layout["html"]).fields
+    assert got == FACTS, (
+        f"layout {layout['id']!r} did not yield the stated facts.\n"
+        f"  expected: {FACTS}\n  actual:   {got}\n  ({layout['note']})"
+    )
+
+# invariance is the property the rules actually claim, so assert it directly rather than
+# inferring it from three separate equalities
+distinct = {json.dumps(run(StructuralExtractor, l["html"]).fields, sort_keys=True) for l in LAYOUTS}
+assert len(distinct) == 1, f"extraction was not invariant across layouts: {distinct}"
+
+# --- 2. the fixture can detect readers that are not invariant ---------------------
+
+positional = [run(PositionalReader, l["html"]).first for l in LAYOUTS]
+assert len(set(positional)) > 1, (
+    "the positional reader agreed with itself across all layouts, so this fixture cannot "
+    f"detect position being treated as presence; got {positional}"
+)
+assert FACTS["name"] in positional and any(v != FACTS["name"] for v in positional), (
+    f"expected the positional reader to be right on one layout and wrong on another, "
+    f"got {positional}"
 )
 
-print(f"  structural extraction stable across layouts: {structural[0]}")
-print(f"  positional reader diverged as predicted: {positional[0]!r} vs {positional[1]!r}")
+salience = [run(SalienceReader, l["html"]).heading for l in LAYOUTS]
+assert len(set(salience)) > 1, (
+    "the salience reader agreed with itself across all layouts, so this fixture cannot "
+    f"detect visual prominence being treated as importance; got {salience}"
+)
+
+# and the decoration a salience reader falls for must not be in the answer at all
+for value in salience:
+    if value is not None and value != FACTS["name"]:
+        assert value not in FACTS.values(), (
+            f"the decoy {value!r} is also a real fact, so catching the salience reader "
+            f"proves nothing"
+        )
+
+print(f"  stated facts recovered from all {len(LAYOUTS)} layouts: {FACTS}")
+print(f"  extraction invariant across arrangement and decoration")
+print(f"  positional reader caught: {positional}")
+print(f"  salience reader caught: {salience}")
