@@ -44,12 +44,36 @@ def load_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         raise ConfigError("Collector config declares no collectors")
 
     for name, collector in collectors.items():
-        for field in ("collector_id_env", "required_fields", "target_policy", "drift"):
-            if field not in collector:
-                raise ConfigError(f"Collector {name!r} is missing required key {field!r}")
-        if not collector["required_fields"]:
-            raise ConfigError(f"Collector {name!r} declares no required fields, so drift is undetectable")
+        validate_collector(collector, name=name)
     return config
+
+
+def validate_collector(collector: Any, name: str = "<collector>") -> dict[str, Any]:
+    """Reject a collector that cannot be used safely, and say why.
+
+    Called by `load_config` and again by every function that consumes a collector. The
+    second call is not redundant: these are public functions taking a plain dict, so a
+    caller can reach them without passing through the loader. An invariant enforced only
+    at the front door is not enforced, it is assumed, and the failure then surfaces as a
+    ZeroDivisionError or an AttributeError from deep inside rather than as a clear
+    configuration error at the boundary.
+    """
+    if not isinstance(collector, dict):
+        raise ConfigError(f"Collector {name!r} must be an object, got {type(collector).__name__}")
+    for field in ("collector_id_env", "required_fields", "target_policy", "drift"):
+        if field not in collector:
+            raise ConfigError(f"Collector {name!r} is missing required key {field!r}")
+    if not isinstance(collector["required_fields"], list) or not collector["required_fields"]:
+        raise ConfigError(f"Collector {name!r} declares no required fields, so drift is undetectable")
+    if not isinstance(collector["target_policy"], dict):
+        raise ConfigError(f"Collector {name!r} has a malformed target_policy")
+    drift = collector["drift"]
+    if not isinstance(drift, dict):
+        raise ConfigError(f"Collector {name!r} has a malformed drift block")
+    for key in ("min_records", "max_missing_field_ratio", "min_mean_field_length"):
+        if key not in drift:
+            raise ConfigError(f"Collector {name!r} drift block is missing {key!r}")
+    return collector
 
 
 def get_collector(name: str, path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
@@ -61,6 +85,7 @@ def get_collector(name: str, path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
 
 def resolve_collector_id(collector: dict[str, Any], environ: dict[str, str] | None = None) -> str:
     """Read the collector id from the environment. Identifiers are never committed."""
+    validate_collector(collector)
     env = os.environ if environ is None else environ
     key = collector["collector_id_env"]
     value = (env.get(key) or "").strip()
@@ -71,6 +96,7 @@ def resolve_collector_id(collector: dict[str, Any], environ: dict[str, str] | No
 
 def check_target_allowed(collector: dict[str, Any], url: str) -> None:
     """Reject a target the policy forbids, before any request is made."""
+    validate_collector(collector)
     policy = collector["target_policy"]
     lowered = url.lower()
     for denied in policy.get("denied_hosts", []):
@@ -85,6 +111,7 @@ def evaluate_drift(collector: dict[str, Any], records: list[dict[str, Any]]) -> 
 
     A non-empty result means the source changed shape, not that the request failed.
     """
+    validate_collector(collector)
     rules = collector["drift"]
     required = collector["required_fields"]
     signals: list[str] = []
