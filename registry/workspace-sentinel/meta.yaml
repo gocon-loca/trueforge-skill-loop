@@ -2,7 +2,7 @@ name: workspace-sentinel
 version: 2
 minted_from: incident
 exercised: true
-exercised_at: '2026-08-29T22:46:53.265354Z'
+exercised_at: '2026-08-29T22:49:51.737771Z'
 exercised_by: make verify-skill SKILL=workspace-sentinel
 exercised_hash: 4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c
 citations: 8
