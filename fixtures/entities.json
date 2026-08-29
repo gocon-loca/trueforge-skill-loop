@@ -1,0 +1,27 @@
+{
+  "note": "Synthetic entities. Real organisation names are held pending operator sign-off, since publishing a competitor list is a statement about positioning rather than a technical question. The method is what this demonstrates; swapping in real records changes no code.",
+  "records": [
+    {"id": "alpha-1", "label": "Alpha Systems", "source": "registry", "kind": "org"},
+    {"id": "alpha-2", "label": "Alpha Systems Inc", "source": "filings", "kind": "org"},
+    {"id": "alpha-3", "label": "AlphaSystems", "source": "press", "kind": "org"},
+    {"id": "beta-1", "label": "Beta Analytics", "source": "registry", "kind": "org"},
+    {"id": "beta-2", "label": "Beta Analytics Ltd", "source": "filings", "kind": "org"},
+    {"id": "gamma-1", "label": "Gamma Labs", "source": "registry", "kind": "org"},
+    {"id": "gamma-2", "label": "Gamma Laboratories", "source": "press", "kind": "org"},
+    {"id": "inv-north", "label": "Northwind Capital", "source": "filings", "kind": "investor"},
+    {"id": "inv-harbor", "label": "Harbor Ventures", "source": "filings", "kind": "investor"}
+  ],
+  "matches": [
+    {"left": "alpha-1", "right": "alpha-2", "confidence": 0.97, "basis": "shared registration number"},
+    {"left": "alpha-2", "right": "alpha-3", "confidence": 0.94, "basis": "normalised name plus domain"},
+    {"left": "beta-1", "right": "beta-2", "confidence": 0.96, "basis": "shared registration number"},
+    {"left": "gamma-1", "right": "gamma-2", "confidence": 0.93, "basis": "normalised name plus domain"},
+    {"left": "alpha-3", "right": "beta-1", "confidence": 0.52, "basis": "one shared director surname"},
+    {"left": "beta-2", "right": "gamma-1", "confidence": 0.48, "basis": "similar sector description"}
+  ],
+  "relations": [
+    {"from": "inv-north", "to": "alpha-1", "kind": "invested_in", "source": "public filing"},
+    {"from": "inv-north", "to": "beta-1", "kind": "invested_in", "source": "public filing"},
+    {"from": "inv-harbor", "to": "gamma-1", "kind": "invested_in", "source": "public filing"}
+  ]
+}

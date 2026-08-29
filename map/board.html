@@ -1,92 +1,161 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pipeline Output</title>
-  <style>
-    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
-    body { background: #10151f; color: #edf3ff; margin: 0; padding: 2rem; }
-    main { margin: auto; max-width: 1100px; }
-    h1 { margin-bottom: .25rem; }
-    .subtitle { color: #9caeca; margin-top: 0; }
-    .table-wrap { overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; background: #172131; }
-    th, td { border-bottom: 1px solid #2a3a51; padding: .8rem; text-align: left; vertical-align: top; }
-    th { color: #9caeca; }
-    .yes { color: #70e1a1; }
-    .no { color: #f2b86b; }
-    .error { color: #ff8a8a; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interconnection map</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfa; --fg: #1a1a19; --muted: #6b6b66; --line: #d9d9d4;
+    --org: #3b6ea5; --investor: #7a5ea8; --unverified: #b0803a; --card: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161715; --fg:#eceae4; --muted:#9a9a92; --line:#33352f;
+            --org:#7aa9d8; --investor:#b39ddb; --unverified:#d9a55a; --card:#1e201d; }
+  }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.5 ui-sans-serif,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .stats { display:flex; gap:28px; flex-wrap:wrap; margin: 0 0 24px;
+           padding:14px 18px; background:var(--card); border:1px solid var(--line);
+           border-radius:10px; }
+  .stat b { display:block; font-size:20px; font-variant-numeric: tabular-nums; }
+  .stat span { color:var(--muted); font-size:12px; }
+  figure { margin:0 0 24px; background:var(--card); border:1px solid var(--line);
+           border-radius:10px; overflow-x:auto; }
+  svg { display:block; min-width:640px; }
+  .legend { display:flex; gap:20px; flex-wrap:wrap; color:var(--muted); font-size:13px;
+            margin-bottom:24px; }
+  .legend i { display:inline-block; width:11px; height:11px; border-radius:3px;
+              margin-right:6px; vertical-align:-1px; }
+  table { border-collapse: collapse; width:100%; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);
+           vertical-align: top; }
+  th { color:var(--muted); font-weight:600; }
+  .note { color:var(--muted); font-size:13px; border-left:3px solid var(--line);
+          padding-left:14px; margin: 28px 0 0; }
+  .err { color:#c0392b; }
+</style>
 </head>
 <body>
-  <main>
-    <h1>Pipeline Output</h1>
-    <p class="subtitle">Records emitted by the acquisition and scoring pipeline. Base view for the competitor map.</p>
-    <p id="summary">Loading records…</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Record</th><th>Authors</th><th>Score</th><th>Status</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-  </main>
-  <script>
-    // Every value below originates from scraped, untrusted content. Build nodes and
-    // assign textContent; never assemble markup from record fields.
-    const cell = (row, text, className) => {
-      const td = document.createElement('td');
-      td.textContent = text;
-      if (className) td.className = className;
-      row.appendChild(td);
-      return td;
-    };
+<main>
+  <h1>Interconnection map</h1>
+  <p class="sub" id="sub">Loading…</p>
+  <div class="stats" id="stats"></div>
+  <figure><svg id="graph" viewBox="0 0 900 420" role="img"
+    aria-label="Entity interconnection graph"></svg></figure>
+  <div class="legend">
+    <span><i style="background:var(--org)"></i>organisation</span>
+    <span><i style="background:var(--investor)"></i>investor</span>
+    <span><i style="background:var(--unverified)"></i>unverified match, below the floor</span>
+  </div>
+  <table><thead><tr>
+    <th>Entity</th><th>Records merged</th><th>Sources</th>
+  </tr></thead><tbody id="rows"></tbody></table>
+  <p class="note" id="note"></p>
+</main>
+<script>
+const SVGNS = "http://www.w3.org/2000/svg";
+const el = (t, attrs) => {
+  const n = document.createElementNS(SVGNS, t);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+};
+// Content is rendered as text nodes only. Records originate from scraped public sources,
+// which is untrusted input, so nothing here is assembled into markup.
+const text = (parent, value) => parent.appendChild(document.createTextNode(String(value)));
 
-    const authorList = value =>
-      Array.isArray(value) ? value.map(String).join(', ') : value == null ? '' : String(value);
+function stat(container, value, label) {
+  const d = document.createElement("div");
+  d.className = "stat";
+  const b = document.createElement("b");
+  text(b, value);
+  const s = document.createElement("span");
+  text(s, label);
+  d.append(b, s);
+  container.appendChild(d);
+}
 
-    const scoreText = value =>
-      typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '—';
+function render(graph) {
+  document.querySelector("#sub").textContent =
+    "Entities resolved from public records, with linkage confidence carried into the output.";
 
-    const fail = message => {
-      const summary = document.querySelector('#summary');
-      summary.textContent = '';
-      const span = document.createElement('span');
-      span.className = 'error';
-      span.textContent = `Could not load ../data/papers.json: ${message}`;
-      summary.appendChild(span);
-    };
+  const stats = document.querySelector("#stats");
+  stat(stats, graph.record_count, "records ingested");
+  stat(stats, graph.cluster_count, "entities after verified merge");
+  stat(stats, graph.confidence_floor, "confidence floor");
+  stat(stats, graph.edges.filter(e => !e.verified).length, "links declined");
 
-    fetch('../data/papers.json')
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(records => {
-        if (!Array.isArray(records)) throw new Error('expected a JSON array');
-        document.querySelector('#summary').textContent = `${records.length} records ingested`;
-        const tbody = document.querySelector('#rows');
-        for (const record of records) {
-          const row = document.createElement('tr');
+  const svg = document.querySelector("#graph");
+  const nodes = graph.clusters;
+  const cx = 450, cy = 205, r = 150;
+  const pos = {};
+  nodes.forEach((n, i) => {
+    const a = (i / nodes.length) * Math.PI * 2 - Math.PI / 2;
+    pos[n.id] = { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  });
 
-          const first = document.createElement('td');
-          const strong = document.createElement('strong');
-          strong.textContent = record.title == null ? '' : String(record.title);
-          first.appendChild(strong);
-          first.appendChild(document.createElement('br'));
-          const small = document.createElement('small');
-          small.textContent = record.arxiv_id == null ? '' : String(record.arxiv_id);
-          first.appendChild(small);
-          row.appendChild(first);
+  for (const e of graph.edges) {
+    const a = pos[e.source], b = pos[e.target];
+    if (!a || !b) continue;
+    const line = el("line", {
+      x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+      stroke: e.verified ? "var(--line)" : "var(--unverified)",
+      "stroke-width": e.verified ? 2 : 1.5,
+      "stroke-dasharray": e.verified ? "" : "5 4",
+    });
+    const title = el("title", {});
+    text(title, e.verified
+      ? `${e.kind} (${e.provenance})`
+      : `declined at ${e.confidence}: ${e.provenance}`);
+    line.appendChild(title);
+    svg.appendChild(line);
+  }
 
-          cell(row, authorList(record.authors));
-          cell(row, scoreText(record.score));
-          cell(row, record.reproducible ? 'Flagged' : 'Not flagged', record.reproducible ? 'yes' : 'no');
+  for (const n of nodes) {
+    const p = pos[n.id];
+    const g = el("g", {});
+    const circle = el("circle", {
+      cx: p.x, cy: p.y, r: 10 + Math.min(n.evidence, 4) * 3,
+      fill: n.kind === "investor" ? "var(--investor)" : "var(--org)",
+    });
+    const title = el("title", {});
+    text(title, `${n.label} — ${n.evidence} record(s): ${n.members.join(", ")}`);
+    circle.appendChild(title);
+    const label = el("text", {
+      x: p.x, y: p.y - 20, "text-anchor": "middle",
+      fill: "var(--fg)", "font-size": "12",
+    });
+    text(label, n.label);
+    g.append(circle, label);
+    svg.appendChild(g);
+  }
 
-          tbody.appendChild(row);
-        }
-      })
-      .catch(error => fail(error.message));
-  </script>
+  const rows = document.querySelector("#rows");
+  for (const n of nodes) {
+    const tr = document.createElement("tr");
+    for (const v of [n.label, n.members.join(", "), n.sources.join(", ")]) {
+      const td = document.createElement("td");
+      text(td, v);
+      tr.appendChild(td);
+    }
+    rows.appendChild(tr);
+  }
+  document.querySelector("#note").textContent = graph.note || "";
+}
+
+fetch("../data/graph.json")
+  .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+  .then(render)
+  .catch(err => {
+    const sub = document.querySelector("#sub");
+    sub.className = "sub err";
+    sub.textContent = "Could not load ../data/graph.json (" + err.message +
+      "). Run: make map";
+  });
+</script>
 </body>
 </html>
