@@ -40,13 +40,7 @@
         "objective": "cost: bound observation size and latency",
         "supports": "dom-downsampling"
       }
-    ],
-    "amended": {
-      "date": "2026-08-29",
-      "gap_question": "Does current literature change how entities and observations should be reduced for a web agent?",
-      "retrieval_source": "arxiv-live",
-      "note": "Rule 2 amended to carry a convergent second source. AOR-3 prescribed the same action (downsample the HTML before it goes forward) for a different objective (cost rather than extraction fidelity). Recorded per the mint/amend/skip procedure step 1b, so the live retrieval that prompted this is visible in the registry rather than only in a commit message."
-    }
+    ]
   },
   "Does current literature change how entities should be linked across independent public sources?": {
     "citations": [

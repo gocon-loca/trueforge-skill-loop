@@ -85,6 +85,15 @@ def validate_trust_state(meta: "SkillMeta") -> None:
         raise InvalidTrustStateError(
             f"skill {meta.name!r} has unknown minted_from {meta.minted_from!r}"
         )
+    for entry in meta.amendments:
+        fields = dict(entry)
+        missing = {"gap_question", "retrieval_source", "date"} - fields.keys()
+        if missing:
+            raise InvalidTrustStateError(
+                f"skill {meta.name!r} has an amendment record missing {sorted(missing)}; "
+                f"an amendment that does not say what prompted it records nothing"
+            )
+
     if meta.minted_from in {"research", "incident"} and meta.citations < 1:
         raise InvalidTrustStateError(
             f"skill {meta.name!r} claims {meta.minted_from} provenance but cites nothing"
@@ -142,6 +151,11 @@ class SkillMeta:
     exercised_by: str | None
     exercised_hash: str | None
     citations: int
+    # Procedure step 1b: an amend must carry forward the provenance of the research that
+    # prompted it. Without this, folding a live-minted skill into an existing one erases the
+    # evidence that live retrieval happened at all, and the only surviving record is a commit
+    # message. It lives in meta.yaml because that is where a consumer looks.
+    amendments: tuple = ()
 
     @classmethod
     def from_mapping(cls, data: dict) -> "SkillMeta":
@@ -156,6 +170,9 @@ class SkillMeta:
             exercised_at=data.get("exercised_at"),
             exercised_by=data.get("exercised_by"),
             exercised_hash=data.get("exercised_hash"),
+            amendments=tuple(
+                tuple(sorted(a.items())) for a in (data.get("amendments") or [])
+            ),
             citations=int(data.get("citations", 0)),
         )
 
@@ -169,6 +186,7 @@ class SkillMeta:
             "exercised_by": self.exercised_by,
             "exercised_hash": self.exercised_hash,
             "citations": self.citations,
+            "amendments": [dict(a) for a in self.amendments],
         }
 
 
@@ -377,6 +395,7 @@ class Registry:
         skill_body: str,
         extra_files: dict[str, str] | None = None,
         minted_from: str = "research",
+        amendment: dict | None = None,
     ) -> SkillMeta:
         """Write a skill pack from a research digest. Always lands untrusted."""
         if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
@@ -391,8 +410,13 @@ class Registry:
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         previous_version = 0
+        carried_amendments: tuple = ()
         if (skill_dir / "meta.yaml").is_file():
-            previous_version = self.load_meta(name).version
+            existing = self.load_meta(name)
+            previous_version = existing.version
+            # Amendment history accumulates. A later amend must not erase an earlier one,
+            # which is the same erasure step 1b exists to prevent.
+            carried_amendments = existing.amendments
 
         # Finding 3. Revoke trust BEFORE touching content, so a crash mid-write can only
         # leave new content marked untrusted, never new content under old passing evidence.
@@ -438,6 +462,9 @@ class Registry:
             exercised_by=None,
             exercised_hash=None,
             citations=len(digest.grounded_citations()),
+            amendments=carried_amendments + (
+                (tuple(sorted(amendment.items())),) if amendment else ()
+            ),
         )
         self._write_meta(name, meta)
         return meta

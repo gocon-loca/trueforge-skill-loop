@@ -63,6 +63,8 @@ class SkillSpec:
     verify_summary: str
     minted_from: str = "research"
     fixture: str | None = None
+    # Step 1b: what prompted an amend, recorded on the skill rather than in a commit.
+    amendment: dict | None = None
 
     def detect_gap(self, task: Task) -> MethodGap | None:
         if self.trigger in task.description:
@@ -145,6 +147,19 @@ SITE_INTERPRETATION = SkillSpec(
     ),
     verify_template="verify_site_interpretation.py",
     fixture="site-interpretation-known-answers.json",
+    amendment={
+        "date": "2026-08-29",
+        "gap_question": (
+            "How should a running agent decide how much of an observation to carry?"
+        ),
+        "retrieval_source": "arxiv-live",
+        "identifier": "arXiv:2605.29397v1",
+        "changed": (
+            "Rule 2 amended to carry a convergent second source. The retrieval prescribed "
+            "the same action for a different objective, cost rather than extraction "
+            "fidelity, so it merged into the existing rule instead of minting a third skill."
+        ),
+    },
     verify_summary=(
         "A pass means structural extraction survived a reordering that defeats a "
         "position-based reader."

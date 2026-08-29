@@ -731,3 +731,51 @@ class IncidentProvenanceTests(unittest.TestCase):
                 name="demo-skill", version=1, minted_from="vibes", exercised=False,
                 exercised_at=None, exercised_by=None, exercised_hash=None, citations=3,
             ))
+
+
+class AmendmentProvenanceTests(unittest.TestCase):
+    """Procedure step 1b: an amend must carry forward the provenance of the research that
+    prompted it, in the registry rather than in a commit message."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.registry = Registry(Path(self._tmp.name))
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_amendment_is_recorded_on_the_skill(self) -> None:
+        meta = self.registry.mint(
+            "demo-skill", grounded_digest(), "# body",
+            amendment={"date": "2026-08-29", "gap_question": "q",
+                       "retrieval_source": "arxiv-live"},
+        )
+        self.assertEqual(len(meta.amendments), 1)
+        self.assertEqual(dict(meta.amendments[0])["retrieval_source"], "arxiv-live")
+
+    def test_amendment_history_accumulates_rather_than_overwrites(self) -> None:
+        """A later amend erasing an earlier one is the same erasure 1b exists to prevent."""
+        self.registry.mint("demo-skill", grounded_digest(), "# v1",
+                           amendment={"date": "1", "gap_question": "q1",
+                                      "retrieval_source": "arxiv-live"})
+        meta = self.registry.mint("demo-skill", grounded_digest(), "# v2",
+                                  amendment={"date": "2", "gap_question": "q2",
+                                             "retrieval_source": "fixture"})
+        self.assertEqual([dict(a)["date"] for a in meta.amendments], ["1", "2"])
+
+    def test_an_amendment_that_says_nothing_is_refused(self) -> None:
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="demo-skill", version=1, minted_from="research", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=2,
+                amendments=((("date", "2026-08-29"),),),
+            ))
+
+    def test_amendment_survives_a_round_trip_through_disk(self) -> None:
+        self.registry.mint("demo-skill", grounded_digest(), "# body",
+                           amendment={"date": "2026-08-29", "gap_question": "q",
+                                      "retrieval_source": "arxiv-live"})
+        reloaded = Registry(Path(self._tmp.name)).load_meta("demo-skill")
+        self.assertEqual(dict(reloaded.amendments[0])["gap_question"], "q")
