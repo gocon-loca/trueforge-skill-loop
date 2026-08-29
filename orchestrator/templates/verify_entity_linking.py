@@ -29,7 +29,12 @@ from pathlib import Path
 # The fixture ships inside the skill directory, so `exercised_hash` covers it. A
 # known-answer fixture kept outside that directory is load-bearing for the gate and outside
 # the trust binding: the expected answer could be edited while the skill stayed trusted.
-SKILL_DIR = Path(os.environ.get("SKILL_REGISTRY", "registry")) / os.environ["SKILL_NAME"]
+# Runs under the gate, which sets SKILL_NAME and SKILL_REGISTRY. Falls back so the file is
+# also runnable by hand, since a verification nobody can run standalone is hard to debug.
+SKILL_DIR = (
+    Path(os.environ.get("SKILL_REGISTRY", "registry"))
+    / os.environ.get("SKILL_NAME", "public-source-entity-linking")
+)
 FIXTURE = SKILL_DIR / "fixture.json"
 
 data = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -67,7 +72,17 @@ def union_find(ids, edges):
 # --- the method under test, exactly as the skill states it -------------------------
 
 def link_verified(records, matches, floor):
-    """The method, with all three rules inside it.
+    """The method, with all three rules inside it, including a real verified merge.
+
+    An earlier version filtered by confidence and then took transitive closure over what
+    survived. That is what the cited rule names as insufficient: closure compounds matcher
+    errors even among links that individually pass, so a chain of above-floor links still
+    joins records that share nothing. A threshold is not a verified merge.
+
+    The merge step is now checked. Before two clusters are joined, they must not disagree on
+    a declared strong attribute. `domain` is that attribute here, and it is a matching signal
+    the method is entitled to read. `registration` is ground truth and the method never
+    touches it, which is what keeps the check from being circular.
 
     [blocking-before-comparison] candidates are blocked before any pair is considered, so a
     cross-block pair is never compared. This is part of the method rather than a statistic
@@ -81,15 +96,51 @@ def link_verified(records, matches, floor):
     ids = [r["id"] for r in records]
     block_of = {r["id"]: r["block"] for r in records}
 
+    domain_of = {r["id"]: r.get("domain", "") for r in records}
+
     considered = 0
-    edges = []
+    qualifying = []
     for m in matches:
         if block_of[m["left"]] != block_of[m["right"]]:
             continue          # blocked out: never compared
         considered += 1
         if m["confidence"] >= floor:
-            edges.append((m["left"], m["right"]))
-    return union_find(ids, edges), considered
+            qualifying.append((m["left"], m["right"]))
+
+    # verified merge: join only when the two clusters agree on the strong attribute
+    clusters = {i: {i} for i in ids}
+
+    def owner(x):
+        for root, members in clusters.items():
+            if x in members:
+                return root
+        return x
+
+    for left, right in qualifying:
+        a, b = owner(left), owner(right)
+        if a == b:
+            continue
+        domains_a = {domain_of[m] for m in clusters[a] if domain_of[m]}
+        domains_b = {domain_of[m] for m in clusters[b] if domain_of[m]}
+        if domains_a and domains_b and domains_a != domains_b:
+            continue          # merge refused: the join is not verified
+        clusters[a] |= clusters[b]
+        del clusters[b]
+
+    return [sorted(v) for v in clusters.values()], considered
+
+
+def mutant_threshold_then_closure(records, matches, floor):
+    """Mutant: filter by the floor, then take plain transitive closure. This is the method
+    the cited rule explicitly says is not enough, and the earlier version of this file
+    implemented it while claiming to implement a verified merge."""
+    ids = [r["id"] for r in records]
+    block_of = {r["id"]: r["block"] for r in records}
+    edges = [
+        (m["left"], m["right"]) for m in matches
+        if m["confidence"] >= floor and block_of[m["left"]] == block_of[m["right"]]
+    ]
+    return union_find(ids, edges)
 
 
 def link_without_blocking(records, matches, floor):
@@ -160,6 +211,18 @@ assert len(naive) == data["expected_under_naive_closure"]["cluster_count"], (
     f"{data['expected_under_naive_closure']['cluster_count']} cluster(s), got {len(naive)}"
 )
 
+thresholded = normalise(mutant_threshold_then_closure(records, matches, CONFIDENCE_FLOOR))
+assert thresholded != want, (
+    "threshold-then-closure produced the correct answer, so this fixture cannot detect the "
+    "residual the cited rule is actually about: closure compounding errors among links that "
+    "individually pass"
+)
+assert len(thresholded) == data["expected_under_threshold_then_closure"]["cluster_count"], (
+    f"expected threshold-then-closure to give "
+    f"{data['expected_under_threshold_then_closure']['cluster_count']} clusters, "
+    f"got {len(thresholded)}"
+)
+
 guessed = normalise(mutant_guessed_threshold(records, matches))
 assert guessed != want, (
     "the guessed-threshold mutant produced the correct answer, so this fixture cannot "
@@ -192,5 +255,6 @@ assert cross_block > 0, "no cross-block pairs in the fixture, so blocking is unt
 
 print(f"  known answer reproduced: {len(actual)} clusters, matching the registration field")
 print(f"  naive closure caught: collapses to {len(naive)} cluster(s), not {len(want)}")
+print(f"  threshold-then-closure caught: {len(thresholded)} cluster(s), not {len(want)}")
 print(f"  guessed-threshold mutant caught: {len(guessed)} cluster(s), distinct from both")
 print(f"  blocking inside the method: {compared} pairs compared, {cross_block} skipped")

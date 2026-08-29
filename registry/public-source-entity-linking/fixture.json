@@ -5,46 +5,174 @@
     "ground_truth_source": "The `registration` field on each record. Two records describe the same organisation exactly when they carry the same registration number. That is a fact recorded in the data, not an output of any matcher.",
     "why_this_matters": "A fixture whose expected answer is produced by the implementation it tests proves only self-consistency, and it will pass for the same reason the skill is wrong. Here the expected clustering is derived from a field the linking method never reads. The method sees only `matches`; `registration` exists solely to state the answer independently of it.",
     "match_scores": "The confidences below are stated by the fixture, not computed. They stand in for a matcher's output so that the linking policy, not the matcher, is what is under test.",
-    "known_limits": "This is a constructed fixture, not a published benchmark with adjudicated labels. It establishes that the method is separable from its answer and that a broken method is detected. It does not establish accuracy on real records."
+    "known_limits": "This is a constructed fixture, not a published benchmark with adjudicated labels. It establishes that the method is separable from its answer and that a broken method is detected. It does not establish accuracy on real records.",
+    "strong_attribute": "`domain` is a matching signal the method may read. `registration` is ground truth and the method never reads it. Keeping them separate is what stops the verified merge from being circular."
   },
   "records": [
-    {"id": "acme-1",   "label": "Acme Systems",        "registration": "REG-1001", "block": "acme"},
-    {"id": "acme-2",   "label": "Acme Systems Inc",    "registration": "REG-1001", "block": "acme"},
-    {"id": "acme-3",   "label": "AcmeSystems",         "registration": "REG-1001", "block": "acme"},
-    {"id": "globex-1", "label": "Globex Analytics",    "registration": "REG-2002", "block": "globex"},
-    {"id": "globex-2", "label": "Globex Analytics Ltd","registration": "REG-2002", "block": "globex"},
-    {"id": "globex-3", "label": "Globex Analytica",    "registration": "REG-2002", "block": "globex"},
-    {"id": "initech-1","label": "Initech Labs",        "registration": "REG-3003", "block": "initech"},
-    {"id": "initech-2","label": "Initech Laboratories","registration": "REG-3003", "block": "initech"},
-    {"id": "umbrella-1","label": "Umbrella Data",      "registration": "REG-4004", "block": "umbrella"}
+    {
+      "id": "acme-1",
+      "label": "Acme Systems",
+      "registration": "REG-1001",
+      "block": "acme",
+      "domain": "acme.example"
+    },
+    {
+      "id": "acme-2",
+      "label": "Acme Systems Inc",
+      "registration": "REG-1001",
+      "block": "acme",
+      "domain": "acme.example"
+    },
+    {
+      "id": "acme-3",
+      "label": "AcmeSystems",
+      "registration": "REG-1001",
+      "block": "acme",
+      "domain": "acme.example"
+    },
+    {
+      "id": "globex-1",
+      "label": "Globex Analytics",
+      "registration": "REG-2002",
+      "block": "globex",
+      "domain": "globex.example"
+    },
+    {
+      "id": "globex-2",
+      "label": "Globex Analytics Ltd",
+      "registration": "REG-2002",
+      "block": "globex",
+      "domain": "globex.example"
+    },
+    {
+      "id": "globex-3",
+      "label": "Globex Analytica",
+      "registration": "REG-2002",
+      "block": "globex",
+      "domain": "globex.example"
+    },
+    {
+      "id": "initech-1",
+      "label": "Initech Labs",
+      "registration": "REG-3003",
+      "block": "initech",
+      "domain": "initech.example"
+    },
+    {
+      "id": "initech-2",
+      "label": "Initech Laboratories",
+      "registration": "REG-3003",
+      "block": "initech",
+      "domain": "initech.example"
+    },
+    {
+      "id": "umbrella-1",
+      "label": "Umbrella Data",
+      "registration": "REG-4004",
+      "block": "umbrella",
+      "domain": "umbrella.example"
+    },
+    {
+      "id": "acme-4",
+      "label": "Acme Holdings",
+      "registration": "REG-5005",
+      "block": "acme",
+      "domain": "acme-holdings.example"
+    }
   ],
   "matches": [
-    {"left": "acme-1",    "right": "acme-2",    "confidence": 0.97, "basis": "shared registration number"},
-    {"left": "acme-2",    "right": "acme-3",    "confidence": 0.95, "basis": "normalised name plus domain"},
-    {"left": "globex-1",  "right": "globex-2",  "confidence": 0.96, "basis": "shared registration number"},
-    {"left": "globex-2",  "right": "globex-3",  "confidence": 0.94, "basis": "normalised name plus domain"},
-    {"left": "initech-1", "right": "initech-2", "confidence": 0.93, "basis": "normalised name plus domain"},
-
-    {"left": "acme-3",    "right": "globex-1",  "confidence": 0.52, "basis": "one shared director surname"},
-    {"left": "globex-3",  "right": "initech-1", "confidence": 0.48, "basis": "similar sector description"},
-    {"left": "initech-2", "right": "umbrella-1","confidence": 0.61, "basis": "same registered agent address"}
+    {
+      "left": "acme-1",
+      "right": "acme-2",
+      "confidence": 0.97,
+      "basis": "shared registration number"
+    },
+    {
+      "left": "acme-2",
+      "right": "acme-3",
+      "confidence": 0.95,
+      "basis": "normalised name plus domain"
+    },
+    {
+      "left": "globex-1",
+      "right": "globex-2",
+      "confidence": 0.96,
+      "basis": "shared registration number"
+    },
+    {
+      "left": "globex-2",
+      "right": "globex-3",
+      "confidence": 0.94,
+      "basis": "normalised name plus domain"
+    },
+    {
+      "left": "initech-1",
+      "right": "initech-2",
+      "confidence": 0.93,
+      "basis": "normalised name plus domain"
+    },
+    {
+      "left": "acme-3",
+      "right": "globex-1",
+      "confidence": 0.52,
+      "basis": "one shared director surname"
+    },
+    {
+      "left": "globex-3",
+      "right": "initech-1",
+      "confidence": 0.48,
+      "basis": "similar sector description"
+    },
+    {
+      "left": "initech-2",
+      "right": "umbrella-1",
+      "confidence": 0.61,
+      "basis": "same registered agent address"
+    },
+    {
+      "left": "acme-3",
+      "right": "acme-4",
+      "confidence": 0.94,
+      "basis": "normalised name prefix, same block"
+    }
   ],
   "expected": {
     "clusters": [
-      ["acme-1", "acme-2", "acme-3"],
-      ["globex-1", "globex-2", "globex-3"],
-      ["initech-1", "initech-2"],
-      ["umbrella-1"]
+      [
+        "acme-1",
+        "acme-2",
+        "acme-3"
+      ],
+      [
+        "globex-1",
+        "globex-2",
+        "globex-3"
+      ],
+      [
+        "initech-1",
+        "initech-2"
+      ],
+      [
+        "umbrella-1"
+      ],
+      [
+        "acme-4"
+      ]
     ],
-    "cluster_count": 4,
-    "note": "Read directly off `registration`: three REG-1001, three REG-2002, two REG-3003, one REG-4004. The three sub-floor matches are the ones a naive closure would follow, and following any one of them merges groups with different registration numbers."
+    "cluster_count": 5,
+    "note": "Read directly off `registration`: three REG-1001, three REG-2002, two REG-3003, one REG-4004. The three sub-floor matches are the ones a naive closure would follow, and following any one of them merges groups with different registration numbers. acme-4 is the chaining case: it links to acme-3 at 0.94, above the floor, so a method that thresholds and then takes transitive closure merges it into the acme group. It is a different organisation, REG-5005, and it disagrees on domain, which is the signal a verified merge checks."
   },
   "expected_under_naive_closure": {
     "cluster_count": 1,
     "note": "Every record ends in one cluster: the three weak links form a chain acme -> globex -> initech -> umbrella. This is the collapse [transitive-closure-collapse] describes, and the fixture is built so the chain spans the whole dataset rather than merging one pair."
   },
   "expected_under_no_blocking": {
-    "comparisons": 36,
-    "note": "All pairs of 9 records, 9*8/2. With blocking on the `block` key the method compares only within-block pairs, of which there are 3+3+1+0 = 7. [blocking-before-comparison] is the rule this checks."
+    "comparisons": 45,
+    "within_block_pairs": 10,
+    "note": "All pairs of 10 records is 45. Blocking on the `block` key leaves 10 within-block pairs. [blocking-before-comparison] is the rule this checks."
+  },
+  "expected_under_threshold_then_closure": {
+    "cluster_count": 4,
+    "note": "Filtering by confidence and then taking closure still chains acme-4 into the acme group through one above-floor link. This is the residual the cited rule names: closure compounds matcher errors even among links that individually pass. A threshold is not a verified merge."
   }
 }
