@@ -2,7 +2,7 @@
 # every target then picks it up automatically. Override with PYTHON=... if you prefer.
 VENV ?= .venv
 PYTHON ?= $(shell [ -x $(VENV)/bin/python ] && echo $(VENV)/bin/python || echo python3)
-.PHONY: deps demo map check-versions retrieve trueforge-skills verify-skill fixture scrape exercise serve test clean
+.PHONY: deps demo map check-versions retrieve decide trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -68,3 +68,8 @@ check-versions:
 retrieve:
 	@test -n "$(TASK)" || { echo 'TASK="..." is required' >&2; exit 2; }
 	$(PYTHON) -m orchestrator.retrieve_cli "$(TASK)"
+
+# Retrieve, then record the action chosen and the scores that informed it.
+decide:
+	@test -n "$(TASK)" || { echo 'TASK="..." is required' >&2; exit 2; }
+	$(PYTHON) -m orchestrator.decide_cli "$(TASK)"
