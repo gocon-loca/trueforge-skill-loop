@@ -19,7 +19,10 @@ The loop this project runs, per work step:
 2. **Method-gap check.** Before executing, it asks whether current literature changes how
    this step should be done.
 3. **Research.** If yes, it dispatches a research task and produces a digest with full
-   citations and extracted method rules.
+   citations and extracted method rules. Two executors ship: a deterministic fixture-backed
+   stub, which is what the offline paths use, and `ArxivResearchExecutor`, which queries the
+   public arXiv API and extracts each method rule with a local model. Neither needs an
+   account or an API key.
 4. **Mint.** The digest becomes a `SKILL.md` pack with its citations, committed to the
    skill registry, which TrueForge reads as a git-backed skill source. See
    [Registering the registry with TrueForge](#registering-the-registry-with-trueforge).
@@ -78,6 +81,15 @@ Two provenances, both cited, neither self-certifying.
 `minted_from: incident` marks one extracted from an operational record, where each rule
 traces to a logged event rather than a paper. Both are rejected at mint time if they cite
 nothing, and both land untrusted and earn trust the same way.
+
+`registry/agent-observation-reduction` was minted from a **live** retrieval rather than a
+fixture: real papers, real identifiers, and author lists taken from the API rather than
+recorded as unverified. Its rules were extracted from the abstracts by a local model, which
+is a judgement rather than a lookup, so its verification checks grounding rather than
+correctness. It asserts every citation carries a well-formed arXiv identifier and a non-empty
+imperative rule, that authorship is not recorded as unverified, and that every key cited in
+the body resolves. That is a weaker guarantee than the fixture-backed skills get, and the
+skill says so in its own constraints: read the cited papers before relying on a rule.
 
 `workspace-sentinel` is the second kind. Its rules come from the recorded behaviour of a
 coordination agent, including two cases where the refined rule differs from the obvious one:
