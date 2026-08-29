@@ -749,7 +749,7 @@ class AmendmentProvenanceTests(unittest.TestCase):
         meta = self.registry.mint(
             "demo-skill", grounded_digest(), "# body",
             amendment={"date": "2026-08-29", "gap_question": "q",
-                       "retrieval_source": "arxiv-live"},
+                       "retrieval_source": "arxiv-live", "identifier": "arXiv:1"},
         )
         self.assertEqual(len(meta.amendments), 1)
         self.assertEqual(dict(meta.amendments[0])["retrieval_source"], "arxiv-live")
@@ -758,10 +758,10 @@ class AmendmentProvenanceTests(unittest.TestCase):
         """A later amend erasing an earlier one is the same erasure 1b exists to prevent."""
         self.registry.mint("demo-skill", grounded_digest(), "# v1",
                            amendment={"date": "1", "gap_question": "q1",
-                                      "retrieval_source": "arxiv-live"})
+                                      "retrieval_source": "arxiv-live", "identifier": "arXiv:1"})
         meta = self.registry.mint("demo-skill", grounded_digest(), "# v2",
                                   amendment={"date": "2", "gap_question": "q2",
-                                             "retrieval_source": "fixture"})
+                                             "retrieval_source": "fixture", "identifier": "arXiv:2"})
         self.assertEqual([dict(a)["date"] for a in meta.amendments], ["1", "2"])
 
     def test_an_amendment_that_says_nothing_is_refused(self) -> None:
@@ -777,7 +777,7 @@ class AmendmentProvenanceTests(unittest.TestCase):
     def test_amendment_survives_a_round_trip_through_disk(self) -> None:
         self.registry.mint("demo-skill", grounded_digest(), "# body",
                            amendment={"date": "2026-08-29", "gap_question": "q",
-                                      "retrieval_source": "arxiv-live"})
+                                      "retrieval_source": "arxiv-live", "identifier": "arXiv:1"})
         reloaded = Registry(Path(self._tmp.name)).load_meta("demo-skill")
         self.assertEqual(dict(reloaded.amendments[0])["gap_question"], "q")
 
@@ -885,3 +885,147 @@ class ReMintVersioningTests(unittest.TestCase):
         again = self.registry.mint("demo-skill", grounded_digest(), "# body")
         self.assertFalse(again.exercised)
         self.assertIsNone(again.exercised_hash)
+
+
+class QodoRound16Tests(unittest.TestCase):
+    """The seven findings Qodo raised on #16, which landed after it merged."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.registry = Registry(self.root / "registry")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _amend(self, **over):
+        base = {"date": "2026-08-29", "gap_question": "q",
+                "retrieval_source": "arxiv-live", "identifier": "arXiv:1"}
+        base.update(over)
+        return base
+
+    def test_rollback_to_earlier_content_can_re_earn_trust(self) -> None:
+        """Finding 1. Reverting a skill assigned a fresh version over old content, which the
+        ledger refuses, so a rollback was impossible rather than merely awkward."""
+        self.registry.mint("demo-skill", grounded_digest(), "# body A")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+        self.registry.mint("demo-skill", grounded_digest(), "# body B")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+
+        rolled = self.registry.mint("demo-skill", grounded_digest(), "# body A")
+        self.assertEqual(rolled.version, 1, "rolling back to v1 content must return to v1")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+        self.assertTrue(self.registry.is_trusted("demo-skill"))
+
+    def test_amendment_without_an_identifier_is_refused(self) -> None:
+        """Finding 2. An amendment naming no source is not traceable to anything."""
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="d", version=1, minted_from="research", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=2,
+                amendments=((("date", "1"), ("gap_question", "q"),
+                             ("retrieval_source", "arxiv-live")),),
+            ))
+
+    def test_amendment_history_does_not_duplicate(self) -> None:
+        """Finding 3. Re-minting with the same amendment said the amend happened twice."""
+        a = self._amend()
+        self.registry.mint("demo-skill", grounded_digest(), "# b1", amendment=a)
+        meta = self.registry.mint("demo-skill", grounded_digest(), "# b2", amendment=a)
+        self.assertEqual(len(meta.amendments), 1)
+
+    def test_supports_pointing_nowhere_is_refused(self) -> None:
+        """Finding 4. A rule cannot merge into one that is not there."""
+        d = Digest(question="q", citations=(
+            Citation(key="a", title="T", authors="A", venue="V", year=2024,
+                     identifier="arXiv:1", method_rule="rule a"),
+            Citation(key="b", title="T", authors="A", venue="V", year=2024,
+                     identifier="arXiv:2", method_rule="rule b",
+                     objective="cost", supports="nonexistent"),
+        ))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_convergent_citation_without_an_objective_is_refused(self) -> None:
+        """Finding 7. The reasons are the part that must survive the merge."""
+        d = Digest(question="q", citations=(
+            Citation(key="a", title="T", authors="A", venue="V", year=2024,
+                     identifier="arXiv:1", method_rule="rule a"),
+            Citation(key="b", title="T", authors="A", venue="V", year=2024,
+                     identifier="arXiv:2", method_rule="rule b", supports="a"),
+        ))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_ledger_is_validated_before_idempotence_short_circuits(self) -> None:
+        """Finding 8. Checking idempotence first meant an already-inconsistent ledger was
+        never examined, so the check went quiet exactly when it mattered."""
+        from orchestrator.registry import VersionAmbiguityError
+
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+        existing = self.registry.read_ledger()[0]
+        with self.registry.ledger_path().open("a") as fh:
+            fh.write(json.dumps({"name": "demo-skill", "version": 99,
+                                 "content_hash": existing["content_hash"]}) + "\n")
+        # re-recording the SAME entry must still notice the ledger is now inconsistent
+        with self.assertRaises(VersionAmbiguityError):
+            self.registry._record_version(
+                "demo-skill", existing["version"], existing["content_hash"]
+            )
+
+
+class QodoRound18Tests(unittest.TestCase):
+    """Findings Qodo raised on the fix for #16's findings."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.registry = Registry(Path(self._tmp.name))
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _cite(self, key, **over):
+        base = dict(key=key, title="T", authors="A", venue="V", year=2024,
+                    identifier=f"arXiv:{key}", method_rule=f"rule {key}")
+        base.update(over)
+        return Citation(**base)
+
+    def test_empty_amendment_identifier_is_refused(self) -> None:
+        """Presence is not content: an empty identifier names a retrieval as precisely as an
+        absent one, which is not at all."""
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="d", version=1, minted_from="research", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=2,
+                amendments=((("date", "1"), ("gap_question", "q"),
+                             ("identifier", "   "), ("retrieval_source", "arxiv-live")),),
+            ))
+
+    def test_duplicate_citation_keys_are_refused(self) -> None:
+        d = Digest(question="q", citations=(self._cite("a"), self._cite("a")))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_nested_convergence_is_refused(self) -> None:
+        """Convergence renders one rule per primary, so a chain drops the middle rule."""
+        d = Digest(question="q", citations=(
+            self._cite("a"),
+            self._cite("b", supports="a", objective="cost"),
+            self._cite("c", supports="b", objective="latency"),
+        ))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_amendment_values_may_be_lists_or_mappings(self) -> None:
+        """Deduplication assumed hashable values and raised on valid YAML."""
+        a = {"date": "1", "gap_question": "q", "retrieval_source": "arxiv-live",
+             "identifier": "arXiv:1", "notes": ["one", "two"]}
+        meta = self.registry.mint("demo-skill", grounded_digest(), "# b", amendment=a)
+        self.assertEqual(len(meta.amendments), 1)
+        again = self.registry.mint("demo-skill", grounded_digest(), "# b2", amendment=a)
+        self.assertEqual(len(again.amendments), 1, "identical amendment recorded twice")
