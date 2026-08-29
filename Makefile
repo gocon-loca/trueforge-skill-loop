@@ -49,14 +49,12 @@ verify-skill:
 	@test -n "$(SKILL)" || { echo "SKILL=<name> is required" >&2; exit 2; }
 	$(PYTHON) -m orchestrator.verify_skill $(SKILL)
 
-<<<<<<< HEAD
 # Register this registry with a running TrueForge instance. No credentials:
 # the repository is public, so TrueForge fetches the packs itself.
 trueforge-skills:
 	$(PYTHON) scripts/register_skills.py
-=======
+
 # Build the interconnection graph and render it.
 map:
 	$(PYTHON) -m pipeline.graph
 	@echo "open map/board.html after: make serve"
->>>>>>> 2b411dc (Build the interconnection map, and fix make deps on a clean machine)
