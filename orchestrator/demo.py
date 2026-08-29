@@ -74,6 +74,7 @@ def build_loop(spec: SkillSpec, registry: Registry, worker, command) -> SkillLoo
         skill_files=spec.files,
         minted_from=spec.minted_from,
         amendment=spec.amendment,
+        signature=spec.signature,
     )
 
 

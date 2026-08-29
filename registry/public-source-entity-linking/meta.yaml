@@ -2,8 +2,17 @@ name: public-source-entity-linking
 version: 4
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T22:53:44.230663Z'
+exercised_at: '2026-08-29T23:21:50.794271Z'
 exercised_by: make verify-skill SKILL=public-source-entity-linking
 exercised_hash: 203d757ae5c19b09d0ac1d44168a39270fea6ecdc9456a07a05b27957fc0d6cd
 citations: 3
+signature:
+  inputs:
+  - records
+  - pairwise match scores
+  - blocking key
+  outputs:
+  - entity clusters
+  - declined links with confidence
+  task_type: decide which records across sources describe the same entity
 amendments: []

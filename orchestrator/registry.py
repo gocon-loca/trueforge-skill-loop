@@ -187,6 +187,7 @@ class SkillMeta:
     exercised_by: str | None
     exercised_hash: str | None
     citations: int
+    signature: tuple = ()
     # Procedure step 1b: an amend must carry forward the provenance of the research that
     # prompted it. Without this, folding a live-minted skill into an existing one erases the
     # evidence that live retrieval happened at all, and the only surviving record is a commit
@@ -210,6 +211,7 @@ class SkillMeta:
                 tuple(sorted(a.items())) for a in (data.get("amendments") or [])
             ),
             citations=int(data.get("citations", 0)),
+            signature=tuple(sorted((data.get("signature") or {}).items())),
         )
 
     def to_mapping(self) -> dict:
@@ -222,6 +224,7 @@ class SkillMeta:
             "exercised_by": self.exercised_by,
             "exercised_hash": self.exercised_hash,
             "citations": self.citations,
+            "signature": {k: v for k, v in self.signature},
             "amendments": [dict(a) for a in self.amendments],
         }
 
@@ -469,6 +472,7 @@ class Registry:
         extra_files: dict[str, str] | None = None,
         minted_from: str = "research",
         amendment: dict | None = None,
+        signature: dict | None = None,
     ) -> SkillMeta:
         """Write a skill pack from a research digest. Always lands untrusted."""
         if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
@@ -594,6 +598,7 @@ class Registry:
             exercised_by=None,
             exercised_hash=None,
             citations=len(digest.grounded_citations()),
+            signature=tuple(sorted((signature or {}).items())),
             amendments=_dedupe(
                 carried_amendments
                 + ((tuple(sorted(amendment.items())),) if amendment else ())

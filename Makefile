@@ -2,7 +2,7 @@
 # every target then picks it up automatically. Override with PYTHON=... if you prefer.
 VENV ?= .venv
 PYTHON ?= $(shell [ -x $(VENV)/bin/python ] && echo $(VENV)/bin/python || echo python3)
-.PHONY: deps demo map check-versions trueforge-skills verify-skill fixture scrape exercise serve test clean
+.PHONY: deps demo map check-versions retrieve trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -63,3 +63,8 @@ map:
 # A rule that recurred three times in four hours is a missing check, not a rule.
 check-versions:
 	$(PYTHON) -c "from orchestrator.registry import Registry, check_version_injectivity; l=Registry('registry').read_ledger(); check_version_injectivity(l); print(f'version ledger consistent: {len(l)} entries')"
+
+# Look up the registry for a task description. Retrieval precedes any mint.
+retrieve:
+	@test -n "$(TASK)" || { echo 'TASK="..." is required' >&2; exit 2; }
+	$(PYTHON) -m orchestrator.retrieve_cli "$(TASK)"
