@@ -10,7 +10,11 @@ scrape:
 	@set -a; \
 	if [ -f .env ]; then . ./.env; fi; \
 	set +a; \
-	$(PYTHON) -m pipeline.scrape
+	if [ -z "$$BRIGHTDATA_COLLECTOR_ID" ]; then \
+		echo "BRIGHTDATA_COLLECTOR_ID is not set. Copy .env.example to .env and fill it in, or use 'make fixture' for the offline path." >&2; \
+		exit 2; \
+	fi; \
+	$(PYTHON) -m pipeline.scrape --collector-id "$$BRIGHTDATA_COLLECTOR_ID"
 
 # A minted skill is untrusted until it completes one passing offline run.
 exercise: test fixture

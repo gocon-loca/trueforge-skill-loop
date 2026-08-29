@@ -88,6 +88,10 @@ def write_sqlite(records: list[dict[str, Any]], path: Path) -> None:
                 scraped_at TEXT NOT NULL
             )"""
         )
+        # The JSON output is a full snapshot of this run. Upserting alone would leave rows
+        # from earlier runs behind, so the two published outputs would describe different
+        # datasets. Replace the table contents so both describe exactly this run.
+        connection.execute("DELETE FROM papers")
         connection.executemany(
             """INSERT OR REPLACE INTO papers VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             [

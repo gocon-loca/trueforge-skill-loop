@@ -1,3 +1,4 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -46,6 +47,28 @@ class PipelineTests(unittest.TestCase):
             path = Path(directory) / "papers.db"
             write_sqlite([paper], path)
             self.assertTrue(path.exists())
+
+    def test_sqlite_matches_the_latest_run(self):
+        """The JSON output is a snapshot of one run, so the table must be too.
+
+        A record present in an earlier run and absent from a later one must not
+        survive, or the two published outputs describe different datasets.
+        """
+        def paper(arxiv_id):
+            return {
+                "arxiv_id": arxiv_id, "title": "Example", "authors": ["Ada"],
+                "abstract": "Toy algorithm", "subjects": ["cs.AI"], "score": 0.6,
+                "reproducible": True, "scraped_at": "2026-08-22T00:00:00Z",
+            }
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "papers.db"
+            write_sqlite([paper("2608.1"), paper("2608.2")], path)
+            write_sqlite([paper("2608.2")], path)
+
+            with sqlite3.connect(path) as connection:
+                ids = {row[0] for row in connection.execute("SELECT arxiv_id FROM papers")}
+            self.assertEqual(ids, {"2608.2"})
 
 if __name__ == "__main__":
     unittest.main()

@@ -53,11 +53,11 @@
       summary.textContent = '';
       const span = document.createElement('span');
       span.className = 'error';
-      span.textContent = `Could not load data/papers.json: ${message}`;
+      span.textContent = `Could not load ../data/papers.json: ${message}`;
       summary.appendChild(span);
     };
 
-    fetch('data/papers.json')
+    fetch('../data/papers.json')
       .then(response => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
