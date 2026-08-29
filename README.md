@@ -70,6 +70,22 @@ make serve   # then open http://localhost:8000/map/board.html
 
 Copy `.env.example` to `.env` for live acquisition. Never commit `.env`.
 
+## Where skills come from
+
+Two provenances, both cited, neither self-certifying.
+
+`minted_from: research` marks a skill whose method rules were extracted from literature.
+`minted_from: incident` marks one extracted from an operational record, where each rule
+traces to a logged event rather than a paper. Both are rejected at mint time if they cite
+nothing, and both land untrusted and earn trust the same way.
+
+`workspace-sentinel` is the second kind. Its rules come from the recorded behaviour of a
+coordination agent, including two cases where the refined rule differs from the obvious one:
+an unavailable liveness signal is missing evidence rather than evidence of failure, and
+crossing an idle threshold is a reason to escalate only when the content would carry new
+information. Its verification replays the situations that actually occurred and asserts the
+encoded policy reproduces the decisions that were actually taken.
+
 ## Registering the registry with TrueForge
 
 TrueForge reads skills as git-backed `SKILL.md` packs. This repository is public, so

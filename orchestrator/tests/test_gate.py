@@ -694,3 +694,40 @@ class TrustBindsToContentTests(unittest.TestCase):
         text = (self.registry.path_for("other-skill") / "citations.md").read_text()
         self.assertIn("[good]", text)
         self.assertNotIn("[hollow]", text)
+
+
+class IncidentProvenanceTests(unittest.TestCase):
+    """A skill may be grounded in an operational record rather than in literature, and it
+    carries the same obligation: every rule traces to a cited source."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.registry = Registry(Path(self._tmp.name))
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_incident_provenance_is_accepted(self) -> None:
+        meta = self.registry.mint(
+            "demo-skill", grounded_digest(), "# body", minted_from="incident"
+        )
+        self.assertEqual(meta.minted_from, "incident")
+        self.assertFalse(meta.exercised, "provenance does not confer trust")
+
+    def test_incident_provenance_still_requires_citations(self) -> None:
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="demo-skill", version=1, minted_from="incident", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=0,
+            ))
+
+    def test_unknown_provenance_is_still_rejected(self) -> None:
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="demo-skill", version=1, minted_from="vibes", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=3,
+            ))
