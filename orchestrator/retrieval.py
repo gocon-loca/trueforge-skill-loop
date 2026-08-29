@@ -66,14 +66,18 @@ class SkillSignature:
     text: str = ""          # the searchable body: description, applicability, rules
 
     def as_document(self) -> str:
-        """The text retrieval actually matches against.
+        """The body text retrieval matches against. Signature fields are NOT included.
 
-        The declared signature fields are repeated once alongside the body. They are the
-        part a skill author committed to, so they should weigh more than an incidental word
-        in a rule, and repeating them is the crudest honest way to say so.
+        An earlier version repeated the declared signature into this string, which meant the
+        `body` component of a score silently contained the `signature` component it is
+        reported beside. Two numbers that look independent and are not is worse than one
+        number, because a reader decomposes the score and draws a conclusion the arithmetic
+        does not support. The signature is scored separately and weighted there.
         """
-        declared = " ".join([self.task_type, *self.inputs, *self.outputs])
-        return f"{declared} {declared} {self.text}"
+        return self.text
+
+    def declared_text(self) -> str:
+        return " ".join([self.task_type, *self.inputs, *self.outputs])
 
 
 @runtime_checkable
@@ -114,7 +118,10 @@ class TfidfEmbedder:
             return {}
         longest = max(counts.values())
         vec = {
-            t: (0.5 + 0.5 * c / longest) * self._idf.get(t, 1.0)
+            # A term absent from the corpus carries no evidence about which skill matches.
+            # Defaulting it to 1.0 gave it more weight than terms that actually appear, so a
+            # query full of unknown words drowned out its one real signal.
+            t: (0.5 + 0.5 * c / longest) * self._idf.get(t, 0.0)
             for t, c in counts.items()
         }
         norm = math.sqrt(sum(v * v for v in vec.values()))
@@ -122,6 +129,11 @@ class TfidfEmbedder:
 
 
 def cosine(a: dict[str, float], b: dict[str, float]) -> float:
+    """Dot product. Correct as cosine ONLY because TfidfEmbedder returns unit vectors.
+
+    Stated because it is an assumption a substituted embedder could silently break: a model
+    returning unnormalised vectors would make every score wrong in a way nothing here checks.
+    """
     if not a or not b:
         return 0.0
     smaller, larger = (a, b) if len(a) <= len(b) else (b, a)
@@ -199,6 +211,12 @@ class SkillIndex:
                 keep.append(sec.group(1))
         return " ".join(keep)
 
+    def unsigned(self) -> list[str]:
+        """Skills declaring no signature. They still match on body text, but they cannot
+        match on the axis that is weighted highest, so a caller should know they are there
+        rather than wonder why they never rank."""
+        return [s.name for s in self.signatures if not s.task_type]
+
     def build(self) -> "SkillIndex":
         self.signatures = []
         if self.root.is_dir():
@@ -208,6 +226,14 @@ class SkillIndex:
                 sig = self._read_signature(d)
                 if sig:
                     self.signatures.append(sig)
+        names = [s.name for s in self.signatures]
+        if len(set(names)) != len(names):
+            dupes = sorted({n for n in names if names.count(n) > 1})
+            raise ValueError(
+                f"registry has duplicate skill names {dupes}; vectors are keyed by name, so "
+                f"one would silently alias the other and both would score as whichever was "
+                f"indexed last"
+            )
         docs = [s.as_document() for s in self.signatures]
         self.embedder.fit(docs or [""])
         self._vectors = {
@@ -243,9 +269,7 @@ class SkillIndex:
         for sig in self.signatures:
             vec = self._vectors.get(sig.name, {})
             body = cosine(query, vec)
-            declared = self.embedder.embed(
-                " ".join([sig.task_type, *sig.inputs, *sig.outputs])
-            )
+            declared = self.embedder.embed(sig.declared_text())
             signature_match = cosine(query, declared)
             # Trust is not relevance, so it is a separate component rather than folded into
             # the score. An untrusted skill can still be the right skill to amend.

@@ -47,7 +47,12 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f'task: "{task}"')
     print(f"{len(index.signatures)} skills indexed, "
-          f"{len(index.ledger())} version-ledger entries read\n")
+          f"{len(index.ledger())} version-ledger entries read")
+    missing = index.unsigned()
+    if missing:
+        print(f"  warning: {len(missing)} skill(s) declare no signature and can only match "
+              f"on body text: {', '.join(missing)}")
+    print()
     print(f"  {'score':>6}  {'body':>6}  {'sig':>6}  {'trust':>5}  skill")
     print(f"  {'-'*6}  {'-'*6}  {'-'*6}  {'-'*5}  {'-'*40}")
     for c in candidates:

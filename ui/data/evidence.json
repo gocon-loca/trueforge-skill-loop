@@ -1,7 +1,7 @@
 {
   "generated_from": "registry + ui/data/events.jsonl",
   "schema": {
-    "x": "mean retrieval score when this rule was consulted; null if never consulted",
+    "x": "mean retrieval score when this rule's skill was consulted; null if never consulted. Retrieval ranks SKILLS, not rules, so every rule of a consulted skill inherits that skill's score. Do not read per-rule precision into it: two rules of one skill are indistinguishable on this axis today.",
     "y": "exercise pass rate for the owning skill; null if never exercised",
     "size": "consultation count; null if never consulted",
     "null_means": "no observation exists. Render at a neutral gutter position, not at zero. Zero is an observation that something scored nothing; null is the absence of any observation, and conflating them turns a sparse map into a confident wrong one."
@@ -10,7 +10,7 @@
     "rules": 16,
     "rules_with_retrieval_observations": 16,
     "rules_without": 0,
-    "events_read": 33
+    "events_read": 169
   },
   "rules": [
     {
@@ -20,9 +20,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 1,
-      "x": 0.0885,
+      "x": 0.0413,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "read-more-think-more"
       ]
@@ -34,9 +34,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 1,
-      "x": 0.0885,
+      "x": 0.0413,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "lineretriever-planning-aware-observation"
       ]
@@ -48,9 +48,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0773,
+      "x": 0.0823,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "web-for-agents"
       ]
@@ -62,9 +62,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0773,
+      "x": 0.0823,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "dom-downsampling",
         "revisiting-observation-reduction-for"
@@ -77,9 +77,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0773,
+      "x": 0.0823,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "webvoyager"
       ]
@@ -91,9 +91,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0823,
+      "x": 0.0505,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "transitive-closure-collapse"
       ]
@@ -105,9 +105,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0823,
+      "x": 0.0505,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "linkage-uncertainty"
       ]
@@ -119,9 +119,9 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "x": 0.0823,
+      "x": 0.0505,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "blocking-before-comparison"
       ]
@@ -133,9 +133,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "channel-read-first"
       ]
@@ -147,9 +147,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "receipt-before-processing"
       ]
@@ -161,9 +161,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "acknowledged-not-applied"
       ]
@@ -175,9 +175,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "watchdog-on-new-information"
       ]
@@ -189,9 +189,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "absent-signal-is-not-evidence"
       ]
@@ -203,9 +203,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "verify-before-relaying"
       ]
@@ -217,9 +217,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "never-confirm-without-evidence"
       ]
@@ -231,9 +231,9 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "x": 0.0871,
+      "x": 0.04,
       "y": 1.0,
-      "size": 4,
+      "size": 38,
       "citations": [
         "escalate-then-default"
       ]
