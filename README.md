@@ -166,8 +166,15 @@ above still register and list correctly.
 ## Qodo Code Review Evidence
 
 Every meaningful change in this repository goes through a pull request reviewed by
-[Qodo](https://www.qodo.ai) before merge. Direct pushes to `main` do not count as reviewed
-work. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow.
+[Qodo](https://www.qodo.ai) before merge, with **one exception, named here because a reader
+can find it in thirty seconds and a claim that `git log` disproves is worse than a weaker
+one.** Commit `6ae3372` went onto `main` without a pull request, on an explicit instruction
+to do so under time pressure at the end of the build. It carries an opt-in embedder, a UI
+data adapter, and a comparison. Everything else on `main` arrived through a reviewed pull
+request.
+
+Direct pushes to `main` do not count as reviewed work, and that one does not.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow.
 
 **Representative merged PR:
 [#1, Scaffold the public repo](https://github.com/gocon-loca/trueforge-skill-loop/pull/1).**
