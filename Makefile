@@ -24,6 +24,7 @@ serve: fixture
 
 test:
 	$(PYTHON) -m unittest discover -s pipeline/tests -t . -v
+	$(PYTHON) -m unittest discover -s orchestrator/tests -t . -v
 
 clean:
 	rm -f data/papers.db data/papers.json artifacts/raw-scrape.json

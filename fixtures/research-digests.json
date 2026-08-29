@@ -1,0 +1,15 @@
+{
+  "Does current literature change how an agent should interpret a web page compared with a human reader?": {
+    "citations": [
+      {
+        "key": "agent-vs-human-salience",
+        "title": "Placeholder pending live research dispatch",
+        "authors": "TBD",
+        "venue": "TBD",
+        "year": 2024,
+        "identifier": "arXiv:0000.00000",
+        "method_rule": "Prefer structural and semantic anchors over visual salience, because rendered prominence does not survive extraction."
+      }
+    ]
+  }
+}
