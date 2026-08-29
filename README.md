@@ -157,7 +157,7 @@ above still register and list correctly.
 | `pipeline/` | Acquisition, normalization, and scoring. Standard library only. |
 | `orchestrator/` | The loop: gap check, research adapter, registry, exercise gate. |
 | `scripts/` | Registering the skill registry with a running TrueForge instance. |
-| `registry/` | Git-backed skill packs in the format TrueForge reads, with the gate schema. |
+| `registry/` | Git-backed skill packs in the format TrueForge reads, the gate schema, and the version ledger. |
 | `config/` | Collector behaviour and drift thresholds, versioned rather than passed ad hoc. |
 | `fixtures/` | Deterministic payloads the offline path and the exercise gate run against. |
 | `map/` | Interconnection map, rendered from `data/graph.json`. |
@@ -242,13 +242,49 @@ mechanism in this repository is worth more than the wording that describes it.
 
 ### PR history
 
-| PR | State | What review changed |
-|---|---|---|
-| [#1](https://github.com/gocon-loca/trueforge-skill-loop/pull/1) | merged | Three lifted correctness bugs fixed; the unenforced gate identified and routed to #4 |
-| [#2](https://github.com/gocon-loca/trueforge-skill-loop/pull/2) | superseded by #4 | Forgeable trust evidence, path traversal, truthy `"false"`, write ordering, launch failures |
-| [#3](https://github.com/gocon-loca/trueforge-skill-loop/pull/3) | open | Division guarded at each point of use rather than only at load |
-| [#4](https://github.com/gocon-loca/trueforge-skill-loop/pull/4) | open | The enforcement path for #1's fourth finding |
+Fifteen merged, one closed and superseded, none pushed directly to `main`. The table names the
+ones where review changed the design rather than the wording.
 
+| PR | What review changed |
+|---|---|
+| [#1](https://github.com/gocon-loca/trueforge-skill-loop/pull/1) | Three correctness bugs; the gate identified as an alias that enforced nothing, routed to #4 |
+| [#2](https://github.com/gocon-loca/trueforge-skill-loop/pull/2) | Closed, superseded by #4. **Carries the fullest review trail**, including the forgeable-evidence exchange |
+| [#3](https://github.com/gocon-loca/trueforge-skill-loop/pull/3) | Drift-check division guarded at each point of use rather than only at load |
+| [#4](https://github.com/gocon-loca/trueforge-skill-loop/pull/4) | The enforcement path for #1's fourth finding: ticket-bound trust, path traversal, truthy `"false"`, write ordering, launch failures |
+| [#10](https://github.com/gocon-loca/trueforge-skill-loop/pull/10) | `make deps` failed on any clean machine under PEP 668, at the first install step a reader runs |
+| [#11](https://github.com/gocon-loca/trueforge-skill-loop/pull/11) | `main` was broken for 86 seconds by committed conflict markers, caught and repaired before anyone cloned it |
+| [#15](https://github.com/gocon-loca/trueforge-skill-loop/pull/15) | Smoke tests replaced by known answers; fixtures moved inside the trust hash; a threshold that claimed to be a verified merge |
+| [#16](https://github.com/gocon-loca/trueforge-skill-loop/pull/16) | Version injectivity made a check rather than a rule, after the same defect recurred three times |
+
+The remaining merged PRs (#5, #6, #7, #8, #9, #12, #13, #14) add the runbook, the second and
+third skills, TrueForge registration, the interconnection map, and the live arXiv executor.
+
+### The check that found what review did not
+
+`version` identifies which body of content a trust record referred to, so the mapping has to
+be injective in both directions. Two contents sharing a version is ambiguous. Two versions
+sharing a content is ambiguous in the same way, and is easier to create by accident, because
+bumping a version feels like diligence.
+
+That rule was written down twice, argued to a sharper form, and agreed explicitly. It then
+recurred three times in four hours while two reviewers were watching for it. A rule that
+survives that is a missing check, so it is one now: `registry/version-ledger.jsonl` records
+`(name, version, content_hash)` on every passing exercise, and the registry refuses an entry
+that makes either direction ambiguous, checked before the trust record is written so a
+violation leaves the skill untrusted rather than trusted under an ambiguous version.
+
+```sh
+make check-versions
+```
+
+Turning it on immediately failed `make demo`, and the failure was correct: minting bumped the
+version unconditionally, so re-minting identical content always produced two versions for one
+content, and the demo re-mints on every run. It had been manufacturing that ambiguity every
+time it ran, through three separate rounds of argument about versioning. Minting now keeps
+the version when content is unchanged, while still revoking trust.
+
+The ledger begins where it begins and cannot validate exercises that predate it.
+`registry/README.md` says so, along with two limits it does not yet address.
 
 ## License
 
