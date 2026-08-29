@@ -82,6 +82,21 @@ def run_one(spec: SkillSpec, registry: Registry) -> bool:
     print("=" * 78)
     print(f"GAP {spec.name}")
     print("=" * 78)
+
+    # Step 0 of the mint/amend/skip procedure: retrieval precedes any mint. It also
+    # emits the consultation events the dashboard reads, so the map only moves when
+    # the loop actually consults the library.
+    task = TASKS[spec.name]
+    try:
+        from orchestrator.retrieval import SkillIndex
+
+        ranked = SkillIndex(registry.root).build().search(task.description)
+        if ranked:
+            top = ranked[0]
+            print(f"  retrieval: {len(ranked)} candidates, best "
+                  f"{top.signature.name} at {top.score:.3f}")
+    except Exception as exc:  # retrieval must never break the loop it informs
+        print(f"  retrieval unavailable: {exc}")
     result = build_loop(spec, registry, PipelineWorker(), None).run_step(TASKS[spec.name])
     for line in result.trace():
         print(f"  {line}")

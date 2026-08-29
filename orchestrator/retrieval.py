@@ -228,7 +228,8 @@ class SkillIndex:
 
     # ---- lookup ---------------------------------------------------------------
 
-    def search(self, task_description: str, limit: int | None = None) -> list[Candidate]:
+    def search(self, task_description: str, limit: int | None = None,
+               emit: bool = True) -> list[Candidate]:
         """Rank every skill against a task description. Returns all of them, scored.
 
         Every candidate is returned rather than only those above a threshold. A caller
@@ -258,4 +259,29 @@ class SkillIndex:
             out.append(Candidate(sig, score, components, overlap))
 
         out.sort(key=lambda c: (-c.score, c.signature.name))
-        return out[:limit] if limit else out
+        ranked = out[:limit] if limit else out
+
+        # E3. One consultation event per candidate scored, not one per lookup: the dashboard
+        # asks how often a rule was consulted and at what score, and a single event per
+        # lookup could not answer either. Emission is best effort, because a retrieval that
+        # fails because a log is unwritable would be a worse failure than a missing event.
+        if emit:
+            try:
+                from orchestrator import events as _events
+
+                for rank, c in enumerate(ranked, start=1):
+                    _events.append(
+                        _events.CONSULTATION,
+                        skill=c.signature.name,
+                        payload={
+                            "task": task_description[:200],
+                            "score": round(c.score, 4),
+                            "rank": rank,
+                            "components": {k: round(v, 4) for k, v in c.components.items()},
+                            "source": "live",
+                        },
+                    )
+            except Exception:
+                pass
+
+        return ranked
