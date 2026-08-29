@@ -1,0 +1,7 @@
+name: public-source-entity-linking
+version: 1
+minted_from: research
+exercised: true
+exercised_at: '2026-08-29T20:08:56.406538Z'
+exercised_by: make verify-skill SKILL=public-source-entity-linking
+citations: 3
