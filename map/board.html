@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pipeline Output</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { background: #10151f; color: #edf3ff; margin: 0; padding: 2rem; }
+    main { margin: auto; max-width: 1100px; }
+    h1 { margin-bottom: .25rem; }
+    .subtitle { color: #9caeca; margin-top: 0; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; background: #172131; }
+    th, td { border-bottom: 1px solid #2a3a51; padding: .8rem; text-align: left; vertical-align: top; }
+    th { color: #9caeca; }
+    .yes { color: #70e1a1; }
+    .no { color: #f2b86b; }
+    .error { color: #ff8a8a; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pipeline Output</h1>
+    <p class="subtitle">Records emitted by the acquisition and scoring pipeline. Base view for the competitor map.</p>
+    <p id="summary">Loading records…</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Record</th><th>Authors</th><th>Score</th><th>Status</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+  <script>
+    // Every value below originates from scraped, untrusted content. Build nodes and
+    // assign textContent; never assemble markup from record fields.
+    const cell = (row, text, className) => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (className) td.className = className;
+      row.appendChild(td);
+      return td;
+    };
+
+    const authorList = value =>
+      Array.isArray(value) ? value.map(String).join(', ') : value == null ? '' : String(value);
+
+    const scoreText = value =>
+      typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '—';
+
+    const fail = message => {
+      const summary = document.querySelector('#summary');
+      summary.textContent = '';
+      const span = document.createElement('span');
+      span.className = 'error';
+      span.textContent = `Could not load ../data/papers.json: ${message}`;
+      summary.appendChild(span);
+    };
+
+    fetch('../data/papers.json')
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(records => {
+        if (!Array.isArray(records)) throw new Error('expected a JSON array');
+        document.querySelector('#summary').textContent = `${records.length} records ingested`;
+        const tbody = document.querySelector('#rows');
+        for (const record of records) {
+          const row = document.createElement('tr');
+
+          const first = document.createElement('td');
+          const strong = document.createElement('strong');
+          strong.textContent = record.title == null ? '' : String(record.title);
+          first.appendChild(strong);
+          first.appendChild(document.createElement('br'));
+          const small = document.createElement('small');
+          small.textContent = record.arxiv_id == null ? '' : String(record.arxiv_id);
+          first.appendChild(small);
+          row.appendChild(first);
+
+          cell(row, authorList(record.authors));
+          cell(row, scoreText(record.score));
+          cell(row, record.reproducible ? 'Flagged' : 'Not flagged', record.reproducible ? 'yes' : 'no');
+
+          tbody.appendChild(row);
+        }
+      })
+      .catch(error => fail(error.message));
+  </script>
+</body>
+</html>
