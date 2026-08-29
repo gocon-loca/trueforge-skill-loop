@@ -46,6 +46,18 @@ MAKE_ARG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(=[A-Za-z0-9._/-]*)?$")
 RESERVED_NAMES = frozenset({"_template"})
 
 
+def _dedupe(entries: tuple) -> tuple:
+    """Preserve order, drop repeats. Re-minting with the same amendment record should not
+    make the history say the amend happened twice."""
+    seen = set()
+    out = []
+    for e in entries:
+        if e not in seen:
+            seen.add(e)
+            out.append(e)
+    return tuple(out)
+
+
 def _strict_bool(value: object, *, field: str) -> bool:
     """Finding 8. `bool("false")` is True, so a quoted false in meta.yaml read as trusted.
 
@@ -88,7 +100,7 @@ def validate_trust_state(meta: "SkillMeta") -> None:
         )
     for entry in meta.amendments:
         fields = dict(entry)
-        missing = {"gap_question", "retrieval_source", "date"} - fields.keys()
+        missing = {"gap_question", "retrieval_source", "date", "identifier"} - fields.keys()
         if missing:
             raise InvalidTrustStateError(
                 f"skill {meta.name!r} has an amendment record missing {sorted(missing)}; "
@@ -448,6 +460,30 @@ class Registry:
                 f"a skill whose rules cite nothing is a skill that invented its method"
             )
 
+        # Convergence must be well formed. A citation that converges on a key which is not
+        # here would merge a rule into one that does not exist, and one that converges
+        # without stating an objective loses the reason the merge was convergent rather than
+        # corroborative, which is the whole distinction.
+        grounded = digest.grounded_citations()
+        keys = {c.key for c in grounded}
+        for c in grounded:
+            if not c.supports:
+                continue
+            if c.supports == c.key:
+                raise UngroundedSkillError(f"citation [{c.key}] converges on itself")
+            if c.supports not in keys:
+                raise UngroundedSkillError(
+                    f"citation [{c.key}] converges on [{c.supports}], which is not a "
+                    f"grounded citation of this skill; a rule cannot merge into one that "
+                    f"is not there"
+                )
+            if not c.objective.strip():
+                raise UngroundedSkillError(
+                    f"citation [{c.key}] converges on [{c.supports}] without stating an "
+                    f"objective; convergence is two sources prescribing one action for "
+                    f"different reasons, and the reasons are what must survive the merge"
+                )
+
         skill_dir = self.path_for(name)
         skill_dir.mkdir(parents=True, exist_ok=True)
 
@@ -501,18 +537,33 @@ class Registry:
         # Bumping anyway would put two version numbers on one body of content, which makes
         # a record naming either of them say nothing the other does not. Trust is still
         # revoked above, because a re-mint means the skill has to re-earn it regardless.
-        unchanged = previous_content and self.content_hash(name) == previous_content
+        # A re-mint that produces identical content is not a new version of the skill.
+        # Bumping anyway would put two version numbers on one body of content.
+        #
+        # A rollback is the same statement from the other side: if this exact content has
+        # carried a version before, it is that version again. Assigning a fresh number would
+        # be refused by the ledger, which would make reverting a skill impossible rather than
+        # merely awkward.
+        new_hash = self.content_hash(name)
+        if previous_content and new_hash == previous_content:
+            version = previous_version
+        else:
+            known = {e["content_hash"]: e["version"] for e in self.read_ledger()
+                     if e["name"] == name}
+            version = known.get(new_hash, previous_version + 1)
+
         meta = SkillMeta(
             name=name,
-            version=previous_version if unchanged else previous_version + 1,
+            version=version,
             minted_from=minted_from,
             exercised=False,
             exercised_at=None,
             exercised_by=None,
             exercised_hash=None,
             citations=len(digest.grounded_citations()),
-            amendments=carried_amendments + (
-                (tuple(sorted(amendment.items())),) if amendment else ()
+            amendments=_dedupe(
+                carried_amendments
+                + ((tuple(sorted(amendment.items())),) if amendment else ())
             ),
         )
         self._write_meta(name, meta)
@@ -538,13 +589,17 @@ class Registry:
         Checked BEFORE the trust record is written, so a violation leaves the skill
         untrusted rather than trusted under an ambiguous version.
         """
-        entries = self.read_ledger()
         entry = {"name": name, "version": version, "content_hash": content_hash}
-        if entry in entries:
-            return          # idempotent: re-exercising identical content is not a conflict
-        check_version_injectivity(entries + [entry])
-        with self.ledger_path().open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, sort_keys=True) + "\n")
+        with self._lock:
+            entries = self.read_ledger()
+            # Validate first, then short-circuit. Checking idempotence before validity means
+            # an already-inconsistent ledger is never examined, so the check would go quiet
+            # exactly when it matters.
+            check_version_injectivity(entries + [entry])
+            if entry in entries:
+                return      # re-exercising identical content is not a conflict
+            with self.ledger_path().open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
     # ---- storage --------------------------------------------------------------
 
