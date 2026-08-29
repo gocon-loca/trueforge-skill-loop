@@ -120,6 +120,19 @@ because a non-empty string is truthy in Python, that re-minting wrote new conten
 revoking trust so an interrupted write could leave new content under old passing evidence,
 and that an unlaunchable verifier aborted the caller instead of failing the gate.
 
+### What review cost, not only what it caught
+
+Two of the three correctness bugs in #1 were introduced by this project, not inherited
+from the code it was lifted from. Moving the rendered view into its own directory broke
+the path it fetched, and rewriting a Make target dropped a required argument so the target
+could not run at all. The drift-check division was written here too. Only the SQLite
+writer predates this repository.
+
+That distinction matters for reading the rest of this section. A review record where every
+finding is an inherited flaw invites the conclusion that the review was staged against a
+straw target. The more credible and more useful account is that we introduced defects at a
+normal rate while moving quickly, and that the process caught them before they merged.
+
 ### The same pattern, found twice
 
 The pattern in both cases is an invariant enforced at a distance from where it is relied
