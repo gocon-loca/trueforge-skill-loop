@@ -23,6 +23,27 @@ exercised_hash: null                   # digest of the files that passed
 citations: 3                           # count in citations.md, 0 for manual skills
 ```
 
+## Versions
+
+`version` identifies which body of content a trust record referred to, so the mapping must be
+injective **in both directions**. Two contents sharing a version is ambiguous: a record naming
+that version cannot say which content it meant. Two versions sharing a content is ambiguous in
+exactly the same way, and is the easier one to create by accident, because bumping a version
+feels like diligence while it destroys the property the field exists for.
+
+`registry/version-ledger.jsonl` records `(name, version, content_hash)` on every passing
+exercise, and the registry refuses to record an entry that would make either direction
+ambiguous. The check runs before the trust record is written, so a violation leaves the skill
+untrusted rather than trusted under an ambiguous version.
+
+```sh
+make check-versions
+```
+
+This is a check rather than a documented rule because the rule was written down twice, argued
+to a sharper form, agreed explicitly, and then recurred three times in four hours while two
+reviewers were watching for it. A rule that survives that is a missing check.
+
 ## The exercise gate
 
 A minted skill is **untrusted until it has completed one successful run.**

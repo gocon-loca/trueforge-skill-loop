@@ -6,6 +6,7 @@ try to obtain trust without a passing run, and assert that every route is closed
 
 from __future__ import annotations
 
+import json
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -779,3 +780,108 @@ class AmendmentProvenanceTests(unittest.TestCase):
                                       "retrieval_source": "arxiv-live"})
         reloaded = Registry(Path(self._tmp.name)).load_meta("demo-skill")
         self.assertEqual(dict(reloaded.amendments[0])["gap_question"], "q")
+
+
+class VersionInjectivityTests(unittest.TestCase):
+    """Version must identify exactly one content, and one content exactly one version.
+
+    This is a check rather than a rule because the rule recurred three times in four hours
+    while two reviewers were watching for it: a re-mint reset every skill to version 1, then
+    one skill carried two versions for identical content, then a second did.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.registry = Registry(Path(self._tmp.name))
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_two_contents_under_one_version_is_refused(self) -> None:
+        from orchestrator.registry import VersionAmbiguityError, check_version_injectivity
+
+        with self.assertRaises(VersionAmbiguityError):
+            check_version_injectivity([
+                {"name": "s", "version": 1, "content_hash": "aaa"},
+                {"name": "s", "version": 1, "content_hash": "bbb"},
+            ])
+
+    def test_two_versions_over_one_content_is_refused(self) -> None:
+        """The direction that is easier to create by accident, because bumping a version
+        feels like diligence while it destroys what the field is for."""
+        from orchestrator.registry import VersionAmbiguityError, check_version_injectivity
+
+        with self.assertRaises(VersionAmbiguityError):
+            check_version_injectivity([
+                {"name": "s", "version": 4, "content_hash": "ccc"},
+                {"name": "s", "version": 5, "content_hash": "ccc"},
+            ])
+
+    def test_a_real_amendment_passes(self) -> None:
+        from orchestrator.registry import check_version_injectivity
+
+        check_version_injectivity([
+            {"name": "s", "version": 3, "content_hash": "eee"},
+            {"name": "s", "version": 4, "content_hash": "fff"},
+        ])
+
+    def test_different_skills_may_share_a_version_number(self) -> None:
+        from orchestrator.registry import check_version_injectivity
+
+        check_version_injectivity([
+            {"name": "a", "version": 1, "content_hash": "xxx"},
+            {"name": "b", "version": 1, "content_hash": "yyy"},
+        ])
+
+    def test_the_gate_records_a_version_and_refuses_an_ambiguous_one(self) -> None:
+        from orchestrator.registry import VersionAmbiguityError
+
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(self.registry, Path(self._tmp.name), "demo-skill")
+        ledger = self.registry.read_ledger()
+        self.assertEqual(len(ledger), 1)
+        self.assertEqual(ledger[0]["name"], "demo-skill")
+
+        # forge a second version over the same content, as the real defects did
+        with self.registry.ledger_path().open("a") as fh:
+            fh.write(json.dumps({"name": "demo-skill", "version": 99,
+                                 "content_hash": ledger[0]["content_hash"]}) + "\n")
+        with self.assertRaises(VersionAmbiguityError):
+            from orchestrator.registry import check_version_injectivity
+            check_version_injectivity(self.registry.read_ledger())
+
+    def test_re_exercising_identical_content_is_not_a_conflict(self) -> None:
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(self.registry, Path(self._tmp.name), "demo-skill")
+        trust_via_gate(self.registry, Path(self._tmp.name), "demo-skill")
+        self.assertEqual(len(self.registry.read_ledger()), 1, "ledger must be idempotent")
+
+
+class ReMintVersioningTests(unittest.TestCase):
+    """A re-mint producing identical content is not a new version of the skill."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.registry = Registry(self.root / "registry")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_identical_content_keeps_its_version(self) -> None:
+        first = self.registry.mint("demo-skill", grounded_digest(), "# body")
+        second = self.registry.mint("demo-skill", grounded_digest(), "# body")
+        self.assertEqual(second.version, first.version)
+
+    def test_changed_content_still_bumps(self) -> None:
+        first = self.registry.mint("demo-skill", grounded_digest(), "# body")
+        second = self.registry.mint("demo-skill", grounded_digest(), "# different body")
+        self.assertEqual(second.version, first.version + 1)
+
+    def test_an_unchanged_re_mint_still_revokes_trust(self) -> None:
+        """Keeping the version is not keeping the trust. The re-mint still has to earn it."""
+        self.registry.mint("demo-skill", grounded_digest(), "# body")
+        trust_via_gate(self.registry, self.root, "demo-skill")
+        again = self.registry.mint("demo-skill", grounded_digest(), "# body")
+        self.assertFalse(again.exercised)
+        self.assertIsNone(again.exercised_hash)
