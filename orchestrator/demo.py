@@ -36,6 +36,11 @@ TASKS = {
         description="link records across public sources into an interconnection graph",
         skill="public-source-entity-linking",
     ),
+    "agent-observation-budgeting": Task(
+        name="workspace/observe",
+        description="budget an observation for a running agent",
+        skill="agent-observation-budgeting",
+    ),
     "workspace-sentinel": Task(
         name="workspace/coordinate",
         description="coordinate a shared workspace and report peer state to an operator",

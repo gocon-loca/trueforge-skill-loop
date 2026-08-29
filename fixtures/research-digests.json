@@ -17,7 +17,8 @@
         "venue": "arXiv preprint",
         "year": 2025,
         "identifier": "arXiv:2508.04412",
-        "method_rule": "Raw DOM is impractical at realistic page sizes, where deeply nested containers, styling hooks and decorative elements obscure semantic structure. Downsample to the semantic skeleton before extraction rather than parsing raw HTML."
+        "method_rule": "Raw DOM is impractical at realistic page sizes, where deeply nested containers, styling hooks and decorative elements obscure semantic structure. Downsample to the semantic skeleton before extraction rather than parsing raw HTML.",
+        "objective": "extraction fidelity: keep the semantic structure legible"
       },
       {
         "key": "webvoyager",
@@ -27,8 +28,25 @@
         "year": 2024,
         "identifier": "arXiv:2401.13919",
         "method_rule": "Screenshots omit content that is occluded, unrendered or hidden behind interaction. Do not treat visual salience as a proxy for presence; confirm against a structural representation."
+      },
+      {
+        "key": "revisiting-observation-reduction-for",
+        "title": "Revisiting Observation Reduction for Web Agents: Comprehensive Evaluation with a Lightweight Framework",
+        "authors": "Masafumi Enomoto, Ryoma Obara, Haochen Zhang, Masafumi Oyamada",
+        "venue": "arXiv preprint",
+        "year": 2026,
+        "identifier": "arXiv:2605.29397v1",
+        "method_rule": "Downsample HTML observations using extractive methods with domain-specific optimization to reduce agent latency while maintaining performance.",
+        "objective": "cost: bound observation size and latency",
+        "supports": "dom-downsampling"
       }
-    ]
+    ],
+    "amended": {
+      "date": "2026-08-29",
+      "gap_question": "Does current literature change how entities and observations should be reduced for a web agent?",
+      "retrieval_source": "arxiv-live",
+      "note": "Rule 2 amended to carry a convergent second source. AOR-3 prescribed the same action (downsample the HTML before it goes forward) for a different objective (cost rather than extraction fidelity). Recorded per the mint/amend/skip procedure step 1b, so the live retrieval that prompted this is visible in the registry rather than only in a commit message."
+    }
   },
   "Does current literature change how entities should be linked across independent public sources?": {
     "citations": [
@@ -134,6 +152,30 @@
         "year": 2026,
         "identifier": "companion.jsonl@13:23:46 and @13:25:44",
         "method_rule": "Flagging once and then holding is not escalation. Escalate a blocked decision with a stated default at 15 minutes, and apply the default at 30 unless the action is irreversible or external-facing, which waits indefinitely."
+      }
+    ]
+  },
+  "How should a running agent decide how much of an observation to carry?": {
+    "citations": [
+      {
+        "key": "read-more-think-more",
+        "title": "Read More, Think More: Revisiting Observation Reduction for Web Agents",
+        "authors": "Masafumi Enomoto, Ryoma Obara, Haochen Zhang, Masafumi Oyamada",
+        "venue": "arXiv preprint",
+        "year": 2026,
+        "identifier": "arXiv:2604.01535v1",
+        "method_rule": "Adaptively select the observation representation from the model's capability and its thinking token budget, rather than fixing one representation for every model and every step.",
+        "objective": "sufficiency: give the model enough to reason with"
+      },
+      {
+        "key": "lineretriever-planning-aware-observation",
+        "title": "LineRetriever: Planning-Aware Observation Reduction for Web Agents",
+        "authors": "Imene Kerboua, Sahar Omidi Shayegan, Megh Thakkar, Xing Han Lu, Massimo Caccia, Veronique Eglin",
+        "venue": "arXiv preprint",
+        "year": 2025,
+        "identifier": "arXiv:2507.00210v1",
+        "method_rule": "Retrieve only the lines the current plan needs, judged against the planning horizon rather than against the page. Reducing by relevance to the page drops lines the planner still required.",
+        "objective": "sufficiency: keep what the plan will need next"
       }
     ]
   }

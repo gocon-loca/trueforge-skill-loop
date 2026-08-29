@@ -17,6 +17,7 @@ Every method rule this skill encodes traces to a source here.
 - Venue and year: arXiv preprint, 2025
 - Identifier: arXiv:2508.04412
 - Method rule extracted: Raw DOM is impractical at realistic page sizes, where deeply nested containers, styling hooks and decorative elements obscure semantic structure. Downsample to the semantic skeleton before extraction rather than parsing raw HTML.
+- Objective supported: extraction fidelity: keep the semantic structure legible
 
 ## [webvoyager]
 
@@ -25,3 +26,13 @@ Every method rule this skill encodes traces to a source here.
 - Venue and year: arXiv preprint, 2024
 - Identifier: arXiv:2401.13919
 - Method rule extracted: Screenshots omit content that is occluded, unrendered or hidden behind interaction. Do not treat visual salience as a proxy for presence; confirm against a structural representation.
+
+## [revisiting-observation-reduction-for]
+
+- Title: Revisiting Observation Reduction for Web Agents: Comprehensive Evaluation with a Lightweight Framework
+- Authors: Masafumi Enomoto, Ryoma Obara, Haochen Zhang, Masafumi Oyamada
+- Venue and year: arXiv preprint, 2026
+- Identifier: arXiv:2605.29397v1
+- Method rule extracted: Downsample HTML observations using extractive methods with domain-specific optimization to reduce agent latency while maintaining performance.
+- Objective supported: cost: bound observation size and latency
+- Converges on rule: [dom-downsampling]
