@@ -1,8 +1,37 @@
 name: competitor-site-interpretation
-version: 3
+version: 4
 minted_from: research
 exercised: true
-exercised_at: '2026-08-29T22:33:03.753113Z'
+exercised_at: '2026-08-29T22:53:44.175830Z'
 exercised_by: make verify-skill SKILL=competitor-site-interpretation
-exercised_hash: b13739bff2f49f33eb7de10ae2cd2c866b4093ce5175f4812ded81430cca716e
-citations: 3
+exercised_hash: 7d1cd5ed95787ce1b52167b82285329d7e0c48db4175be36f227e8ffa27ae36d
+citations: 4
+amendments:
+- changed: Rule 2 amended to carry a convergent second source. The retrieval prescribed
+    the same action for a different objective, cost rather than extraction fidelity,
+    so it merged into the existing rule instead of minting a third skill.
+  date: '2026-08-29'
+  gap_question: How should a running agent decide how much of an observation to carry?
+  identifier: arXiv:2605.29397v1
+  retrieval_source: arxiv-live
+- changed: Rule 2 amended to carry a convergent second source. The retrieval prescribed
+    the same action for a different objective, cost rather than extraction fidelity,
+    so it merged into the existing rule instead of minting a third skill.
+  date: '2026-08-29'
+  gap_question: How should a running agent decide how much of an observation to carry?
+  identifier: arXiv:2605.29397v1
+  retrieval_source: arxiv-live
+- changed: Rule 2 amended to carry a convergent second source. The retrieval prescribed
+    the same action for a different objective, cost rather than extraction fidelity,
+    so it merged into the existing rule instead of minting a third skill.
+  date: '2026-08-29'
+  gap_question: How should a running agent decide how much of an observation to carry?
+  identifier: arXiv:2605.29397v1
+  retrieval_source: arxiv-live
+- changed: Rule 2 amended to carry a convergent second source. The retrieval prescribed
+    the same action for a different objective, cost rather than extraction fidelity,
+    so it merged into the existing rule instead of minting a third skill.
+  date: '2026-08-29'
+  gap_question: How should a running agent decide how much of an observation to carry?
+  identifier: arXiv:2605.29397v1
+  retrieval_source: arxiv-live

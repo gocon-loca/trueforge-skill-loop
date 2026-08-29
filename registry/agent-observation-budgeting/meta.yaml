@@ -1,0 +1,9 @@
+name: agent-observation-budgeting
+version: 1
+minted_from: research
+exercised: true
+exercised_at: '2026-08-29T22:53:44.334133Z'
+exercised_by: make verify-skill SKILL=agent-observation-budgeting
+exercised_hash: 5955b21d95aca49a3ba593ef13f4062092cfc86b94e590b66037cf17a4bd30e1
+citations: 2
+amendments: []

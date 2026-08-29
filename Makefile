@@ -2,7 +2,7 @@
 # every target then picks it up automatically. Override with PYTHON=... if you prefer.
 VENV ?= .venv
 PYTHON ?= $(shell [ -x $(VENV)/bin/python ] && echo $(VENV)/bin/python || echo python3)
-.PHONY: deps demo map trueforge-skills verify-skill fixture scrape exercise serve test clean
+.PHONY: deps demo map check-versions trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -58,3 +58,8 @@ trueforge-skills:
 map:
 	$(PYTHON) -m pipeline.graph
 	@echo "open map/board.html after: make serve"
+
+# Version must identify exactly one content, and one content exactly one version.
+# A rule that recurred three times in four hours is a missing check, not a rule.
+check-versions:
+	$(PYTHON) -c "from orchestrator.registry import Registry, check_version_injectivity; l=Registry('registry').read_ledger(); check_version_injectivity(l); print(f'version ledger consistent: {len(l)} entries')"

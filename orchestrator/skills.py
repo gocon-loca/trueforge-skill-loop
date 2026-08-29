@@ -18,6 +18,38 @@ TEMPLATES = Path(__file__).resolve().parent / "templates"
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 
 
+def _render_rules(citations) -> list[str]:
+    """One numbered rule per group of citations, not per citation.
+
+    A citation carrying `supports` converges on another citation's rule: same prescribed
+    action, different objective. Those render as one rule citing both keys, so the registry
+    does not assert one method twice, and the rule text states both objectives so a later
+    change cannot satisfy one while silently destroying the other.
+    """
+    primaries = [c for c in citations if not c.supports]
+    convergent: dict[str, list] = {}
+    for c in citations:
+        if c.supports:
+            convergent.setdefault(c.supports, []).append(c)
+
+    out = []
+    for i, c in enumerate(primaries, start=1):
+        others = convergent.get(c.key, [])
+        keys = " ".join(f"[{k.key}]" for k in [c, *others])
+        if not others:
+            out.append(f"{i}. {c.method_rule} {keys}")
+            continue
+        objectives = "; ".join(
+            f"{k.objective or 'unstated'} ({k.key})" for k in [c, *others]
+        )
+        out.append(
+            f"{i}. {c.method_rule} Independently prescribed for a second reason: "
+            f"{' '.join(k.method_rule for k in others)} "
+            f"Objectives this rule answers to: {objectives}. {keys}"
+        )
+    return out
+
+
 @dataclass(frozen=True)
 class SkillSpec:
     name: str
@@ -31,11 +63,16 @@ class SkillSpec:
     verify_summary: str
     minted_from: str = "research"
     fixture: str | None = None
+    # Step 1b: what prompted an amend, recorded on the skill rather than in a commit.
+    amendment: dict | None = None
 
     def detect_gap(self, task: Task) -> MethodGap | None:
         if self.trigger in task.description:
             return MethodGap(question=self.gap_question, rationale=self.gap_rationale)
         return None
+
+    def _rules(self, digest: Digest) -> list[str]:
+        return _render_rules(digest.grounded_citations())
 
     def files(self) -> dict[str, str]:
         """Everything the gate needs, shipped inside the skill directory.
@@ -52,10 +89,7 @@ class SkillSpec:
         return out
 
     def write_skill(self, task: Task, digest: Digest) -> str:
-        rules = "\n".join(
-            f"{i}. {c.method_rule} [{c.key}]"
-            for i, c in enumerate(digest.grounded_citations(), start=1)
-        )
+        rules = "\n".join(self._rules(digest))
         return f"""---
 name: {self.name}
 description: {self.description}
@@ -113,6 +147,19 @@ SITE_INTERPRETATION = SkillSpec(
     ),
     verify_template="verify_site_interpretation.py",
     fixture="site-interpretation-known-answers.json",
+    amendment={
+        "date": "2026-08-29",
+        "gap_question": (
+            "How should a running agent decide how much of an observation to carry?"
+        ),
+        "retrieval_source": "arxiv-live",
+        "identifier": "arXiv:2605.29397v1",
+        "changed": (
+            "Rule 2 amended to carry a convergent second source. The retrieval prescribed "
+            "the same action for a different objective, cost rather than extraction "
+            "fidelity, so it merged into the existing rule instead of minting a third skill."
+        ),
+    },
     verify_summary=(
         "A pass means structural extraction survived a reordering that defeats a "
         "position-based reader."
@@ -194,4 +241,38 @@ WORKSPACE_SENTINEL = SkillSpec(
     minted_from="incident",
 )
 
-ALL_SKILLS = (SITE_INTERPRETATION, ENTITY_LINKING, WORKSPACE_SENTINEL)
+OBSERVATION_BUDGETING = SkillSpec(
+    name="agent-observation-budgeting",
+    description=(
+        "Decide how much of an observation a running agent should carry, from its budget "
+        "and its plan rather than from the page. Load before choosing what to keep when an "
+        "observation will not fit."
+    ),
+    trigger="budget",
+    gap_question="How should a running agent decide how much of an observation to carry?",
+    gap_rationale=(
+        "The step assumes one representation fits every model and every point in a plan. "
+        "That assumption decides what the agent still has when it needs it, and its failure "
+        "is silent: the agent proceeds with too little rather than erroring."
+    ),
+    applies_when=(
+        "Before reducing an observation that a later step will read, and whenever an agent "
+        "degrades on longer tasks rather than on harder ones, which is the signature of "
+        "dropping what the plan needed."
+    ),
+    constraints=(
+        "Reduction is not compression for its own sake. These rules answer to sufficiency, "
+        "keeping what the plan will need, and they can conflict with a cost objective. Where "
+        "they do, the conflict is real and belongs to whoever sets the budget, not to a "
+        "silent default."
+    ),
+    verify_template="verify_live_grounding.py",
+    verify_summary=(
+        "Checks grounding rather than correctness: every citation carries a well-formed "
+        "identifier, a non-empty imperative rule, and a stated objective. These rules came "
+        "from a live retrieval, so a person should read the cited papers before relying on "
+        "one."
+    ),
+)
+
+ALL_SKILLS = (SITE_INTERPRETATION, ENTITY_LINKING, WORKSPACE_SENTINEL, OBSERVATION_BUDGETING)

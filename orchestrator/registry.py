@@ -14,6 +14,7 @@ where the run actually happened. The three trust fields (`exercised`, `exercised
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import secrets
@@ -85,6 +86,15 @@ def validate_trust_state(meta: "SkillMeta") -> None:
         raise InvalidTrustStateError(
             f"skill {meta.name!r} has unknown minted_from {meta.minted_from!r}"
         )
+    for entry in meta.amendments:
+        fields = dict(entry)
+        missing = {"gap_question", "retrieval_source", "date"} - fields.keys()
+        if missing:
+            raise InvalidTrustStateError(
+                f"skill {meta.name!r} has an amendment record missing {sorted(missing)}; "
+                f"an amendment that does not say what prompted it records nothing"
+            )
+
     if meta.minted_from in {"research", "incident"} and meta.citations < 1:
         raise InvalidTrustStateError(
             f"skill {meta.name!r} claims {meta.minted_from} provenance but cites nothing"
@@ -93,6 +103,10 @@ def validate_trust_state(meta: "SkillMeta") -> None:
 
 class RegistryError(Exception):
     """Base for registry faults."""
+
+
+class VersionAmbiguityError(RegistryError):
+    """Raised when a version would stop identifying exactly one body of content."""
 
 
 class UntrustedSkillError(RegistryError):
@@ -142,6 +156,11 @@ class SkillMeta:
     exercised_by: str | None
     exercised_hash: str | None
     citations: int
+    # Procedure step 1b: an amend must carry forward the provenance of the research that
+    # prompted it. Without this, folding a live-minted skill into an existing one erases the
+    # evidence that live retrieval happened at all, and the only surviving record is a commit
+    # message. It lives in meta.yaml because that is where a consumer looks.
+    amendments: tuple = ()
 
     @classmethod
     def from_mapping(cls, data: dict) -> "SkillMeta":
@@ -156,6 +175,9 @@ class SkillMeta:
             exercised_at=data.get("exercised_at"),
             exercised_by=data.get("exercised_by"),
             exercised_hash=data.get("exercised_hash"),
+            amendments=tuple(
+                tuple(sorted(a.items())) for a in (data.get("amendments") or [])
+            ),
             citations=int(data.get("citations", 0)),
         )
 
@@ -169,7 +191,44 @@ class SkillMeta:
             "exercised_by": self.exercised_by,
             "exercised_hash": self.exercised_hash,
             "citations": self.citations,
+            "amendments": [dict(a) for a in self.amendments],
         }
+
+
+LEDGER_NAME = "version-ledger.jsonl"
+
+
+def check_version_injectivity(entries: list[dict]) -> None:
+    """`version` must identify exactly one content, and one content exactly one version.
+
+    Both directions, because both are ambiguous in the same way. Two contents sharing a
+    version means a record naming that version cannot say which content it meant. Two
+    versions sharing a content means two records naming different versions point at
+    identical bytes, and nothing downstream can tell whether the difference was meaningful.
+
+    This exists as a check rather than as a rule because the rule was written down twice,
+    argued to a sharper form, agreed explicitly, and then recurred three times in four hours
+    while two reviewers were watching for it. A rule that survives that is a missing check.
+    """
+    by_version: dict[tuple[str, int], set[str]] = {}
+    by_hash: dict[tuple[str, str], set[int]] = {}
+    for e in entries:
+        by_version.setdefault((e["name"], e["version"]), set()).add(e["content_hash"])
+        by_hash.setdefault((e["name"], e["content_hash"]), set()).add(e["version"])
+
+    for (name, version), hashes in sorted(by_version.items()):
+        if len(hashes) > 1:
+            raise VersionAmbiguityError(
+                f"skill {name!r} version {version} names {len(hashes)} different contents "
+                f"({sorted(h[:12] for h in hashes)}); a version must identify one content"
+            )
+    for (name, content_hash), versions in sorted(by_hash.items()):
+        if len(versions) > 1:
+            raise VersionAmbiguityError(
+                f"skill {name!r} content {content_hash[:12]} carries versions "
+                f"{sorted(versions)}; identical content must not carry two versions, or a "
+                f"record naming one of them says nothing the other does not"
+            )
 
 
 class Registry:
@@ -352,6 +411,7 @@ class Registry:
                 exercised_by=command,
                 exercised_hash=ticket.content_hash,
             )
+            self._record_version(name, updated.version, ticket.content_hash)
             self._write_meta(name, updated)
             return updated
 
@@ -377,6 +437,7 @@ class Registry:
         skill_body: str,
         extra_files: dict[str, str] | None = None,
         minted_from: str = "research",
+        amendment: dict | None = None,
     ) -> SkillMeta:
         """Write a skill pack from a research digest. Always lands untrusted."""
         if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
@@ -391,8 +452,15 @@ class Registry:
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         previous_version = 0
+        previous_content = ""
+        carried_amendments: tuple = ()
         if (skill_dir / "meta.yaml").is_file():
-            previous_version = self.load_meta(name).version
+            existing = self.load_meta(name)
+            previous_version = existing.version
+            previous_content = self.content_hash(name)
+            # Amendment history accumulates. A later amend must not erase an earlier one,
+            # which is the same erasure step 1b exists to prevent.
+            carried_amendments = existing.amendments
 
         # Finding 3. Revoke trust BEFORE touching content, so a crash mid-write can only
         # leave new content marked untrusted, never new content under old passing evidence.
@@ -429,18 +497,54 @@ class Registry:
                 raise RegistryError(f"invalid skill file name {filename!r}")
             (skill_dir / filename).write_text(content, encoding="utf-8")
 
+        # A re-mint that produces identical content is not a new version of the skill.
+        # Bumping anyway would put two version numbers on one body of content, which makes
+        # a record naming either of them say nothing the other does not. Trust is still
+        # revoked above, because a re-mint means the skill has to re-earn it regardless.
+        unchanged = previous_content and self.content_hash(name) == previous_content
         meta = SkillMeta(
             name=name,
-            version=previous_version + 1,
+            version=previous_version if unchanged else previous_version + 1,
             minted_from=minted_from,
             exercised=False,
             exercised_at=None,
             exercised_by=None,
             exercised_hash=None,
             citations=len(digest.grounded_citations()),
+            amendments=carried_amendments + (
+                (tuple(sorted(amendment.items())),) if amendment else ()
+            ),
         )
         self._write_meta(name, meta)
         return meta
+
+    # ---- version ledger --------------------------------------------------------
+
+    def ledger_path(self) -> Path:
+        return self.root / LEDGER_NAME
+
+    def read_ledger(self) -> list[dict]:
+        path = self.ledger_path()
+        if not path.is_file():
+            return []
+        return [
+            json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    def _record_version(self, name: str, version: int, content_hash: str) -> None:
+        """Append to the ledger, refusing anything that makes a version ambiguous.
+
+        Checked BEFORE the trust record is written, so a violation leaves the skill
+        untrusted rather than trusted under an ambiguous version.
+        """
+        entries = self.read_ledger()
+        entry = {"name": name, "version": version, "content_hash": content_hash}
+        if entry in entries:
+            return          # idempotent: re-exercising identical content is not a conflict
+        check_version_injectivity(entries + [entry])
+        with self.ledger_path().open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
     # ---- storage --------------------------------------------------------------
 

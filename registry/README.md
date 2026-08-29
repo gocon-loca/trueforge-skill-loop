@@ -23,6 +23,39 @@ exercised_hash: null                   # digest of the files that passed
 citations: 3                           # count in citations.md, 0 for manual skills
 ```
 
+## Versions
+
+`version` identifies which body of content a trust record referred to, so the mapping must be
+injective **in both directions**. Two contents sharing a version is ambiguous: a record naming
+that version cannot say which content it meant. Two versions sharing a content is ambiguous in
+exactly the same way, and is the easier one to create by accident, because bumping a version
+feels like diligence while it destroys the property the field exists for.
+
+`registry/version-ledger.jsonl` records `(name, version, content_hash)` on every passing
+exercise, and the registry refuses to record an entry that would make either direction
+ambiguous. The check runs before the trust record is written, so a violation leaves the skill
+untrusted rather than trusted under an ambiguous version.
+
+```sh
+make check-versions
+```
+
+**The ledger begins where it begins.** It records an entry on each passing exercise from the
+point it was introduced, so it holds nothing about skills exercised before that. A passing
+`make check-versions` says the entries it has are consistent with each other. It does not
+validate any exercise that predates the ledger, and it cannot: those hashes were never
+recorded. Read a pass as "no ambiguity among what is recorded", not as "no ambiguity ever".
+
+Two known limits, neither addressed yet. The ledger is a mutable committed file with no
+protection of its own, so anything that truncates or regenerates it disables the check
+silently, and a truncated ledger and a clean one look identical from the outside. And an
+append-only JSONL conflicts on its last lines when two branches both exercise a skill, where
+both natural resolutions, taking one side or regenerating, destroy history.
+
+This is a check rather than a documented rule because the rule was written down twice, argued
+to a sharper form, agreed explicitly, and then recurred three times in four hours while two
+reviewers were watching for it. A rule that survives that is a missing check.
+
 ## The exercise gate
 
 A minted skill is **untrusted until it has completed one successful run.**

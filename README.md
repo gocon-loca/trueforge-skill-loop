@@ -82,14 +82,23 @@ Two provenances, both cited, neither self-certifying.
 traces to a logged event rather than a paper. Both are rejected at mint time if they cite
 nothing, and both land untrusted and earn trust the same way.
 
-`registry/agent-observation-reduction` was minted from a **live** retrieval rather than a
-fixture: real papers, real identifiers, and author lists taken from the API rather than
-recorded as unverified. Its rules were extracted from the abstracts by a local model, which
-is a judgement rather than a lookup, so its verification checks grounding rather than
-correctness. It asserts every citation carries a well-formed arXiv identifier and a non-empty
-imperative rule, that authorship is not recorded as unverified, and that every key cited in
-the body resolves. That is a weaker guarantee than the fixture-backed skills get, and the
-skill says so in its own constraints: read the cited papers before relying on a rule.
+`competitor-site-interpretation` carries a rule amended from a **live** retrieval: real
+papers, real identifiers, and author lists taken from the API rather than recorded as
+unverified. Its rule 2 is prescribed by two sources for two different objectives, keeping the
+semantic structure legible and bounding observation cost, and it states both because a change
+satisfying one could otherwise destroy the other while the rule still read as satisfied.
+
+`meta.yaml` records what prompted that amend: the gap question, the retrieval source, the
+identifier and the date. That record exists because folding a live retrieval into an existing
+skill would otherwise erase the evidence that live retrieval happened at all, leaving it only
+in a commit message.
+
+`agent-observation-budgeting` carries the rules from that same retrieval which had no
+counterpart. Its rules were extracted from abstracts by a local model, which is a judgement
+rather than a lookup, so its verification checks grounding rather than correctness: every
+citation carries a well-formed arXiv identifier, a non-empty imperative rule, and a stated
+objective. That is a weaker guarantee than the known-answer skills get, and the skill says so
+in its own constraints: read the cited papers before relying on a rule.
 
 `workspace-sentinel` is the second kind. Its rules come from the recorded behaviour of a
 coordination agent, including two cases where the refined rule differs from the obvious one:

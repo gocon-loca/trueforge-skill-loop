@@ -36,6 +36,11 @@ TASKS = {
         description="link records across public sources into an interconnection graph",
         skill="public-source-entity-linking",
     ),
+    "agent-observation-budgeting": Task(
+        name="workspace/observe",
+        description="budget an observation for a running agent",
+        skill="agent-observation-budgeting",
+    ),
     "workspace-sentinel": Task(
         name="workspace/coordinate",
         description="coordinate a shared workspace and report peer state to an operator",
@@ -68,6 +73,7 @@ def build_loop(spec: SkillSpec, registry: Registry, worker, command) -> SkillLoo
         skill_writer=spec.write_skill,
         skill_files=spec.files,
         minted_from=spec.minted_from,
+        amendment=spec.amendment,
     )
 
 

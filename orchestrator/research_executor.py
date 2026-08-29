@@ -28,15 +28,30 @@ class Citation:
     identifier: str
     method_rule: str
 
+    # Convergence support. Two sources can prescribe the same action for different reasons;
+    # merging them as plain corroboration loses the reasons, and a later change satisfying
+    # one objective can then silently destroy the other while the merged rule still reads as
+    # satisfied. `objective` names what this source wants the action for. `supports` names
+    # the citation key whose rule this one converges on, so the two render as one rule
+    # carrying both objectives rather than as two rules or as one rule with a lost reason.
+    objective: str = ""
+    supports: str = ""
+
     def to_markdown(self) -> str:
-        return (
-            f"## [{self.key}]\n\n"
-            f"- Title: {self.title}\n"
-            f"- Authors: {self.authors}\n"
-            f"- Venue and year: {self.venue}, {self.year}\n"
-            f"- Identifier: {self.identifier}\n"
-            f"- Method rule extracted: {self.method_rule}\n"
-        )
+        lines = [
+            f"## [{self.key}]",
+            "",
+            f"- Title: {self.title}",
+            f"- Authors: {self.authors}",
+            f"- Venue and year: {self.venue}, {self.year}",
+            f"- Identifier: {self.identifier}",
+            f"- Method rule extracted: {self.method_rule}",
+        ]
+        if self.objective:
+            lines.append(f"- Objective supported: {self.objective}")
+        if self.supports:
+            lines.append(f"- Converges on rule: [{self.supports}]")
+        return "\n".join(lines) + "\n"
 
 
 @dataclass(frozen=True)
