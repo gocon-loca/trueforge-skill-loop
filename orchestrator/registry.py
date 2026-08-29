@@ -13,8 +13,10 @@ where the run actually happened. The three trust fields (`exercised`, `exercised
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+import secrets
 import shlex
 import tempfile
 from dataclasses import dataclass, replace
@@ -32,6 +34,20 @@ VERIFICATION_BLOCK = re.compile(
 )
 ALLOWED_VERIFIERS = frozenset({"make", "python3", "python", "pytest", "unittest"})
 RESERVED_NAMES = frozenset({"_template"})
+
+
+def _strict_bool(value: object, *, field: str) -> bool:
+    """Finding 8. `bool("false")` is True, so a quoted false in meta.yaml read as trusted.
+
+    Only a real YAML boolean is accepted. A string is rejected rather than coerced, because
+    guessing at the intent of `exercised: "false"` is how a skill becomes trusted by typo.
+    """
+    if isinstance(value, bool):
+        return value
+    raise InvalidTrustStateError(
+        f"{field} must be a YAML boolean, got {type(value).__name__} {value!r}; "
+        f"quote-wrapped booleans are rejected rather than coerced"
+    )
 
 
 def validate_trust_state(meta: "SkillMeta") -> None:
@@ -82,21 +98,28 @@ class UngroundedSkillError(RegistryError):
 
 
 @dataclass(frozen=True)
-class ExerciseEvidence:
-    """Proof that a run happened, produced by whoever ran it.
+class ExerciseTicket:
+    """A registry-issued claim on one exercise run, bound to the skill state it saw.
 
-    `passed` is the caller's assertion about a run it actually performed. The registry
-    refuses to record anything that did not pass, so this type is the only route from a
-    completed run to a trusted skill.
+    Findings 1 and 4. Evidence used to be a caller-constructed `passed=True` boolean, which
+    the review correctly called forgeable: the tests themselves obtained trust without
+    running the gate. A ticket must now be issued by the registry before a run, carries the
+    version and content hash observed at issue time, and is consumed on use.
+
+    What this does and does not achieve, stated plainly. It closes the accidental path, so
+    no caller marks a skill trusted without first asking for a ticket and reporting a real
+    exit status, and it binds a run to the exact skill content that was on disk when the run
+    started, so a concurrent re-mint invalidates the ticket rather than inheriting its trust.
+    It is not unforgeable. Any in-process caller can request a ticket and report rc=0
+    without running anything. In-process code is trusted here; the durable defence is that
+    `exercised_by` records what ran and every trust change is a reviewable diff.
     """
 
-    command: str
-    passed: bool
-    at: datetime
-
-    @staticmethod
-    def now(command: str, *, passed: bool) -> "ExerciseEvidence":
-        return ExerciseEvidence(command=command, passed=passed, at=datetime.now(timezone.utc))
+    skill: str
+    version: int
+    content_hash: str
+    nonce: str
+    issued_at: datetime
 
 
 @dataclass(frozen=True)
@@ -118,7 +141,7 @@ class SkillMeta:
             name=data["name"],
             version=int(data["version"]),
             minted_from=data["minted_from"],
-            exercised=bool(data["exercised"]),
+            exercised=_strict_bool(data["exercised"], field="exercised"),
             exercised_at=data.get("exercised_at"),
             exercised_by=data.get("exercised_by"),
             citations=int(data.get("citations", 0)),
@@ -141,6 +164,7 @@ class Registry:
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root)
+        self._outstanding: dict[str, str] = {}
 
     # ---- reading -------------------------------------------------------------
 
@@ -154,7 +178,17 @@ class Registry:
         )
 
     def path_for(self, name: str) -> Path:
-        return self.root / name
+        """Resolve a skill directory, refusing any name that escapes the registry root.
+
+        Finding 5. Only `mint` validated the name, so every read path accepted traversal.
+        Validation belongs here because this is the single place a name becomes a path.
+        """
+        if not NAME_PATTERN.match(name) or name in RESERVED_NAMES:
+            raise RegistryError(f"invalid skill name {name!r}; expected kebab-case")
+        candidate = (self.root / name).resolve()
+        if candidate.parent != self.root.resolve():
+            raise RegistryError(f"skill name {name!r} escapes the registry root")
+        return candidate
 
     def load_meta(self, name: str) -> SkillMeta:
         meta_path = self.path_for(name) / "meta.yaml"
@@ -211,22 +245,60 @@ class Registry:
 
     # ---- the single writer of the trust fields --------------------------------
 
-    def mark_exercised(self, name: str, evidence: ExerciseEvidence) -> SkillMeta:
+    def content_hash(self, name: str) -> str:
+        """Hash of the skill body the gate is about to verify."""
+        skill_md = self.path_for(name) / "SKILL.md"
+        body = skill_md.read_bytes() if skill_md.is_file() else b""
+        return hashlib.sha256(body).hexdigest()
+
+    def begin_exercise(self, name: str) -> ExerciseTicket:
+        """Issue a single-use ticket bound to the skill state observed right now."""
+        meta = self.load_meta(name)
+        ticket = ExerciseTicket(
+            skill=name,
+            version=meta.version,
+            content_hash=self.content_hash(name),
+            nonce=secrets.token_hex(16),
+            issued_at=datetime.now(timezone.utc),
+        )
+        self._outstanding[name] = ticket.nonce
+        return ticket
+
+    def mark_exercised(
+        self, ticket: ExerciseTicket, *, returncode: int, command: str
+    ) -> SkillMeta:
         """The ONLY code path that sets `exercised` to true. Nothing else may flip it.
 
-        Takes evidence of a run rather than performing one, so that a caller cannot obtain
-        trust without having executed the gate.
+        Requires a ticket this registry issued and has not yet consumed, a zero exit status,
+        and a skill whose version and content still match what the ticket saw.
         """
-        if not evidence.passed:
+        name = ticket.skill
+        if self._outstanding.get(name) != ticket.nonce:
             raise RegistryError(
-                f"refusing to mark {name!r} exercised: evidence reports a failing run"
+                f"refusing to mark {name!r} exercised: ticket is unknown or already consumed"
             )
+        if returncode != 0:
+            self._outstanding.pop(name, None)
+            raise RegistryError(
+                f"refusing to mark {name!r} exercised: run exited {returncode}"
+            )
+
         meta = self.load_meta(name)
+        if meta.version != ticket.version or self.content_hash(name) != ticket.content_hash:
+            # Finding 4: the skill was re-minted while the run was in flight, so this pass
+            # is evidence about content that is no longer on disk.
+            self._outstanding.pop(name, None)
+            raise RegistryError(
+                f"refusing to mark {name!r} exercised: skill changed during the run "
+                f"(ticket saw v{ticket.version}, disk has v{meta.version}); re-exercise it"
+            )
+
+        self._outstanding.pop(name, None)
         updated = replace(
             meta,
             exercised=True,
-            exercised_at=evidence.at.isoformat().replace("+00:00", "Z"),
-            exercised_by=evidence.command,
+            exercised_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            exercised_by=command,
         )
         self._write_meta(name, updated)
         return updated
@@ -256,6 +328,20 @@ class Registry:
         previous_version = 0
         if (skill_dir / "meta.yaml").is_file():
             previous_version = self.load_meta(name).version
+
+        # Finding 3. Revoke trust BEFORE touching content, so a crash mid-write can only
+        # leave new content marked untrusted, never new content under old passing evidence.
+        if previous_version:
+            self._write_meta(
+                name,
+                replace(
+                    self.load_meta(name),
+                    exercised=False,
+                    exercised_at=None,
+                    exercised_by=None,
+                ),
+            )
+            self._outstanding.pop(name, None)
 
         (skill_dir / "SKILL.md").write_text(skill_body, encoding="utf-8")
         (skill_dir / "citations.md").write_text(
