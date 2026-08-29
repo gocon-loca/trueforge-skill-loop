@@ -1,0 +1,8 @@
+name: agent-observation-reduction
+version: 1
+minted_from: research
+exercised: true
+exercised_at: '2026-08-29T21:57:56.101222Z'
+exercised_by: make verify-skill SKILL=agent-observation-reduction
+exercised_hash: 0d61291a7aa736d0dc8676226c606e93b62d670c49172f927f5a915b6dff0032
+citations: 3
