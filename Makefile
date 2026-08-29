@@ -1,5 +1,10 @@
 PYTHON ?= python3
-.PHONY: fixture scrape exercise serve test clean
+.PHONY: deps fixture scrape exercise serve test clean
+
+# The orchestrator needs PyYAML. The pipeline does not need anything.
+deps:
+	$(PYTHON) -m pip install -r requirements.txt
+
 
 # Offline, deterministic path. No network, no credentials. This is the exercise gate.
 fixture:

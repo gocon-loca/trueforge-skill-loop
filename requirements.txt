@@ -1,0 +1,4 @@
+# Runtime dependencies for the orchestrator.
+# The pipeline deliberately has none: it is stdlib only, so the offline fixture path
+# runs on a bare Python 3.11+ with no install step.
+PyYAML>=6.0
