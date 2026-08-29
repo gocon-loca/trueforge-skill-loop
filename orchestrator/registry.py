@@ -46,14 +46,28 @@ MAKE_ARG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(=[A-Za-z0-9._/-]*)?$")
 RESERVED_NAMES = frozenset({"_template"})
 
 
+def _freeze(value):
+    """A hashable view of an arbitrary YAML value, for comparison only.
+
+    Amendment values are usually strings, but nothing forbids a list or a mapping, and an
+    earlier version assumed hashability and raised on valid YAML.
+    """
+    if isinstance(value, dict):
+        return tuple(sorted((k, _freeze(v)) for k, v in value.items()))
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze(v) for v in value)
+    return value
+
+
 def _dedupe(entries: tuple) -> tuple:
     """Preserve order, drop repeats. Re-minting with the same amendment record should not
     make the history say the amend happened twice."""
     seen = set()
     out = []
     for e in entries:
-        if e not in seen:
-            seen.add(e)
+        key = _freeze(e)
+        if key not in seen:
+            seen.add(key)
             out.append(e)
     return tuple(out)
 
@@ -100,7 +114,12 @@ def validate_trust_state(meta: "SkillMeta") -> None:
         )
     for entry in meta.amendments:
         fields = dict(entry)
-        missing = {"gap_question", "retrieval_source", "date", "identifier"} - fields.keys()
+        required = {"gap_question", "retrieval_source", "date", "identifier"}
+        missing = required - fields.keys()
+        # presence is not content: an empty identifier names a retrieval as precisely as an
+        # absent one does, which is not at all
+        missing |= {k for k in required & fields.keys()
+                    if not str(fields.get(k) or "").strip()}
         if missing:
             raise InvalidTrustStateError(
                 f"skill {meta.name!r} has an amendment record missing {sorted(missing)}; "
@@ -465,12 +484,26 @@ class Registry:
         # without stating an objective loses the reason the merge was convergent rather than
         # corroborative, which is the whole distinction.
         grounded = digest.grounded_citations()
-        keys = {c.key for c in grounded}
+        key_list = [c.key for c in grounded]
+        keys = set(key_list)
+        if len(key_list) != len(keys):
+            dupes = sorted({k for k in key_list if key_list.count(k) > 1})
+            raise UngroundedSkillError(
+                f"refusing to mint {name!r}: duplicate citation keys {dupes}. A rule cites a "
+                f"key, so two citations sharing one make the rule's source ambiguous"
+            )
+        converging = {c.key for c in grounded if c.supports}
         for c in grounded:
             if not c.supports:
                 continue
             if c.supports == c.key:
                 raise UngroundedSkillError(f"citation [{c.key}] converges on itself")
+            if c.supports in converging:
+                raise UngroundedSkillError(
+                    f"citation [{c.key}] converges on [{c.supports}], which itself converges "
+                    f"on something else. Convergence renders as one rule per primary, so a "
+                    f"chain silently drops the rule in the middle. Point both at the primary"
+                )
             if c.supports not in keys:
                 raise UngroundedSkillError(
                     f"citation [{c.key}] converges on [{c.supports}], which is not a "

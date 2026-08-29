@@ -975,3 +975,57 @@ class QodoRound16Tests(unittest.TestCase):
             self.registry._record_version(
                 "demo-skill", existing["version"], existing["content_hash"]
             )
+
+
+class QodoRound18Tests(unittest.TestCase):
+    """Findings Qodo raised on the fix for #16's findings."""
+
+    def setUp(self) -> None:
+        self._tmp = TemporaryDirectory()
+        self.registry = Registry(Path(self._tmp.name))
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def _cite(self, key, **over):
+        base = dict(key=key, title="T", authors="A", venue="V", year=2024,
+                    identifier=f"arXiv:{key}", method_rule=f"rule {key}")
+        base.update(over)
+        return Citation(**base)
+
+    def test_empty_amendment_identifier_is_refused(self) -> None:
+        """Presence is not content: an empty identifier names a retrieval as precisely as an
+        absent one, which is not at all."""
+        from orchestrator.registry import SkillMeta, validate_trust_state
+
+        with self.assertRaises(InvalidTrustStateError):
+            validate_trust_state(SkillMeta(
+                name="d", version=1, minted_from="research", exercised=False,
+                exercised_at=None, exercised_by=None, exercised_hash=None, citations=2,
+                amendments=((("date", "1"), ("gap_question", "q"),
+                             ("identifier", "   "), ("retrieval_source", "arxiv-live")),),
+            ))
+
+    def test_duplicate_citation_keys_are_refused(self) -> None:
+        d = Digest(question="q", citations=(self._cite("a"), self._cite("a")))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_nested_convergence_is_refused(self) -> None:
+        """Convergence renders one rule per primary, so a chain drops the middle rule."""
+        d = Digest(question="q", citations=(
+            self._cite("a"),
+            self._cite("b", supports="a", objective="cost"),
+            self._cite("c", supports="b", objective="latency"),
+        ))
+        with self.assertRaises(UngroundedSkillError):
+            self.registry.mint("demo-skill", d, "# body")
+
+    def test_amendment_values_may_be_lists_or_mappings(self) -> None:
+        """Deduplication assumed hashable values and raised on valid YAML."""
+        a = {"date": "1", "gap_question": "q", "retrieval_source": "arxiv-live",
+             "identifier": "arXiv:1", "notes": ["one", "two"]}
+        meta = self.registry.mint("demo-skill", grounded_digest(), "# b", amendment=a)
+        self.assertEqual(len(meta.amendments), 1)
+        again = self.registry.mint("demo-skill", grounded_digest(), "# b2", amendment=a)
+        self.assertEqual(len(again.amendments), 1, "identical amendment recorded twice")
