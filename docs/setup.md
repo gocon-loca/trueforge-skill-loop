@@ -11,27 +11,60 @@ You can evaluate this repository without credentials, without an account, and wi
 asking anyone for a key:
 
 ```sh
-make exercise
+make exercise   # tests plus the offline pipeline path. No install, no credentials.
 ```
 
-That runs the test suite and then the offline pipeline path. If it prints `OK` and then
-publishes records, the system works on your machine. **The offline path is the whole system
-minus live acquisition.** Credentials add real data sources; they do not add capability you
-cannot otherwise inspect.
+To also run the full loop, which needs one dependency:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make demo PYTHON=.venv/bin/python
+```
+
+`make exercise` needs nothing installed and no credentials at all. `make demo` runs the
+whole loop, gap through research, mint, exercise gate, and execution, and needs one
+dependency but still no credentials.
+
+**The offline path is the whole system minus live acquisition.** Credentials add real data
+sources; they do not add capability you cannot otherwise inspect.
 
 ## Prerequisites
 
 | Requirement | Why | How to check |
 |---|---|---|
 | Python 3.9 or newer | The pipeline and its tests. Standard library only, nothing to install. | `python3 --version` |
+| Python 3.10 or newer | The orchestrator, and therefore `make demo`. | `python3 --version` |
 | Node.js 22 or newer | TrueForge, the agent harness. | `node --version` |
 | `make` | Entry point for every task below. | `make --version` |
 
-The Python floor is 3.9 because the full suite and the offline pipeline were run under
-3.9.6 to confirm it. The Node floor is the harness package's own declared minimum.
+Two different floors, because two parts of the repository have different needs, and it is
+worth knowing which you are subject to.
 
-There is nothing to `pip install`. If a dependency appears later, it will be declared
-rather than assumed.
+The pipeline floor is 3.9, confirmed by running its full suite and the offline path under
+3.9.6. It imports nothing outside the standard library.
+
+The orchestrator floor is 3.10. Under 3.9 it fails at import with
+`TypeError: unsupported operand type(s) for |`, because `orchestrator/loop.py` declares a
+type alias using `X | None` union syntax, and a type alias is evaluated eagerly even with
+`from __future__ import annotations` in the file. `requirements.txt` states 3.11 or newer;
+nothing was found that requires 3.11 specifically, but 3.10 was not available here to test,
+so treat 3.11 as the safe number and 3.10 as probable.
+
+The orchestrator needs PyYAML. The pipeline needs nothing.
+
+Install into a virtual environment, then point `make` at it:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make demo PYTHON=.venv/bin/python
+```
+
+There is a `make deps` target, but on a recent macOS or Homebrew Python it fails with
+`error: externally-managed-environment`, because PEP 668 forbids installing into a system
+Python. The virtual environment above is the portable route and works regardless.
+`.venv/` is already gitignored.
 
 ## Running the pipeline offline
 
@@ -40,6 +73,7 @@ make test       # unit tests, no network
 make fixture    # deterministic pipeline run against a committed fixture
 make exercise   # both, in the order the trust gate requires
 make serve      # then open http://localhost:8000/map/board.html
+make demo       # the full loop, after the virtual environment step above
 ```
 
 `make fixture` reads `fixtures/brightdata-papers.json` and publishes to `data/papers.json`
@@ -105,16 +139,27 @@ reviewed work. Qodo reviews automatically; if it does not, comment `/agentic_rev
 valid high-severity findings, or dismiss them in the thread with a reason. The pre-commit
 checklist is in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
+## Seeing the whole loop
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make demo PYTHON=.venv/bin/python
+```
+
+`make demo` mints two skills from two different method gaps, exercises each against its own
+verification, and then attempts work. It is worth watching for what it refuses: a skill
+whose verification fails stays untrusted, and execution is blocked rather than proceeding on
+an unexercised skill. The run prints that refusal as an outcome, because a gate that is
+never seen to reject is not evidence of a gate.
+
 ## Not yet on `main`
 
-Stated here so this runbook does not describe things you cannot run today. Each is an open
-pull request:
+Nothing from the previous edition of this list. Collector configuration, drift detection,
+the orchestrator, and the enforced gate have all landed.
 
-- **Collector configuration and drift detection** (`config/collectors.json`). Moves scraper
-  behaviour out of command-line arguments and adds a check for a source that changed shape.
-- **The orchestrator and the enforced gate.** `make exercise` on `main` today runs the tests
-  and the fixture path. It does not yet read a skill's metadata, run that skill's own
-  verification, or promote its trust state; that enforcement arrives with the orchestrator.
+Still open: registering the skill packs with a running TrueForge instance
+(`make trueforge-skills`).
 
-When those merge, this section shrinks and the sections above grow. If you are reading it
-and it still lists something that has since landed, the runbook is stale and that is a bug.
+If you are reading this and it lists something that has since landed, the runbook is stale
+and that is a bug.
