@@ -165,15 +165,24 @@ above still register and list correctly.
 
 ## Qodo Code Review Evidence
 
-Every meaningful change in this repository goes through a pull request reviewed by
-[Qodo](https://www.qodo.ai) before merge, with **one exception, named here because a reader
-can find it in thirty seconds and a claim that `git log` disproves is worse than a weaker
-one.** Commit `6ae3372` went onto `main` without a pull request, on an explicit instruction
-to do so under time pressure at the end of the build. It carries an opt-in embedder, a UI
-data adapter, and a comparison. Everything else on `main` arrived through a reviewed pull
-request.
+Changes in this repository go through a pull request reviewed by
+[Qodo](https://www.qodo.ai) before merge. **The test is mechanical, so a reader does not have
+to take this section's word for it.** Every commit on `main` that reached it through a pull
+request carries a `(#N)` suffix in its subject. Any commit without one did not go through a
+pull request, and one command lists them:
 
-Direct pushes to `main` do not count as reviewed work, and that one does not.
+```sh
+git log --format='%h %s' main | grep -v '(#[0-9]\+)$'
+```
+
+Run it rather than trusting a count here. A count written into this file describes the tree
+at the moment it was written, and later commits move it; the command describes the tree you
+have. As of `957d746` it returns three: the initial commit, and two that went onto `main`
+without a pull request on an explicit instruction to do so under time pressure at the end of
+the build. Those two carry an opt-in embedder, a UI data adapter, an embedder comparison, and
+the dashboard wiring.
+
+Direct pushes to `main` do not count as reviewed work, and those do not.
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow.
 
 **Representative merged PR:
