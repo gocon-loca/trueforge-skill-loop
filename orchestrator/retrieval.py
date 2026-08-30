@@ -216,6 +216,7 @@ class SkillIndex:
         self.embedder = embedder or TfidfEmbedder()
         self.signatures: list[SkillSignature] = []
         self._rule_docs: dict[str, list] = {}
+        self._rule_vectors: dict[str, dict] = {}
         self._vectors: dict[str, dict[str, float]] = {}
 
     # ---- building -------------------------------------------------------------
@@ -282,6 +283,10 @@ class SkillIndex:
         self._vectors = {
             s.name: self.embedder.embed(d) for s, d in zip(self.signatures, docs)
         }
+        # rule vectors alongside the skill vectors, so a search embeds only the query
+        for sig in self.signatures:
+            for rule_id, rule_text in self._rule_documents(sig.name):
+                self._rule_vectors[rule_id] = self.embedder.embed(rule_text)
         return self
 
     # ---- the version ledger is the state history; read it, do not rebuild it ----
@@ -375,8 +380,12 @@ class SkillIndex:
                     # The same lookup, attributed to each rule of the skill. Without this a
                     # rule's relevance is its skill's relevance, and every rule of a skill
                     # lands on one point.
-                    for rule_id, rule_text in self._rule_documents(c.signature.name):
-                        rule_score = cosine(query, self.embedder.embed(rule_text))
+                    for rule_id, _ in self._rule_documents(c.signature.name):
+                        # Vector precomputed at build time. Embedding per rule per search is
+                        # one request per rule once the embedder is remote, which turns a
+                        # lookup into N requests for no gain: rule text does not change
+                        # between searches, only the query does.
+                        rule_score = cosine(query, self._rule_vectors.get(rule_id, {}))
                         _events.append(
                             _events.CONSULTATION,
                             skill=c.signature.name,
