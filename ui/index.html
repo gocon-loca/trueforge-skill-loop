@@ -352,14 +352,14 @@ const extra=ev.type==="mint"?`minted at score ${ev.score}`:ev.type==="revoke"?`r
 div.innerHTML=`<span class="t">${fmtT(ev.t)}</span><span class="r">${r.rule_id} · ${r.skill}</span><span class="ev ${ev.type}">${EVLBL[ev.type]}</span><span class="detail-line">${extra}</span>`;
 div.querySelector(".r").addEventListener("click",()=>select(RULES.indexOf(r)));
 feed.prepend(div);while(feed.children.length>22)feed.lastChild.remove();}
-let cursor=0;const LIVE_START=64;
+let cursor=0;const LIVE_START=Math.min(64,Math.floor(EVENTS.length*0.6));
 function processEvent(animate){
 if(cursor>=EVENTS.length)return false;
 const ev=EVENTS[cursor++];
 const isNew=ev.type==="mint";
 const r=applyEvent(ev);
 if(!r)return true;
-if(isNew)mkNodeEl(r,RULES.length-1);
+if(isNew&&!r._el)mkNodeEl(r,RULES.indexOf(r));
 if(animate){animateEvent(r);feedRow(ev,r);
 if(selected!==null&&RULES[selected]===r){renderDetail(r);drawLedger(r);}}
 else{[r.dx,r.dy]=pos(r);
@@ -386,7 +386,7 @@ if(!processEvent(true)){replayBtn.disabled=false;replayBtn.textContent="▸ Repl
 setTimeout(stepReplay,340);};
 setTimeout(stepReplay,400);});
 buildStatic();buildNodes();
-while(cursor<LIVE_START)processEvent(false);
+while(cursor<LIVE_START&&processEvent(false));  // must stop when the events run out, not when a fixed count is reached
 select(RULES.findIndex(r=>r.trusted&&r.version>2)>=0?RULES.findIndex(r=>r.trusted&&r.version>2):0);
 startLive();
 window.addEventListener("resize",()=>{buildStatic();buildNodes();gTrails.innerHTML="";view.k=1;view.tx=0;view.ty=0;applyView()});
