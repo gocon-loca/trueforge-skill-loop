@@ -55,6 +55,7 @@ def build(registry_root: Path | str = "registry",
     # observations, keyed by rule where the event names one and by skill otherwise
     consult_scores: dict[str, list[float]] = {}
     consult_count: dict[str, int] = {}
+    selected_count: dict[str, int] = {}
     passes: dict[str, int] = {}
     fails: dict[str, int] = {}
 
@@ -65,8 +66,15 @@ def build(registry_root: Path | str = "registry",
         if not key:
             continue
         if e["event_type"] == CONSULTATION:
-            score = (e.get("payload") or {}).get("score")
+            payload = e.get("payload") or {}
+            score = payload.get("score")
             consult_count[key] = consult_count.get(key, 0) + 1
+            # Retrieval scores EVERY skill on every query, so a raw consultation count is a
+            # count of how many lookups were run and is identical across skills. It cannot
+            # discriminate. Ranking first is a per-skill outcome, so that is what coverage
+            # reads.
+            if payload.get("rank") == 1:
+                selected_count[key] = selected_count.get(key, 0) + 1
             if isinstance(score, (int, float)):
                 consult_scores.setdefault(key, []).append(float(score))
         elif e["event_type"] == EXERCISE_PASS:
@@ -84,6 +92,7 @@ def build(registry_root: Path | str = "registry",
         for rule_id, text, cites in _rules_of(skill_dir):
             # a rule inherits its skill's observations when nothing named the rule directly
             n = consult_count.get(rule_id, consult_count.get(skill, 0))
+            sel = selected_count.get(rule_id, selected_count.get(skill, 0))
             scores = consult_scores.get(rule_id) or consult_scores.get(skill) or []
             p, f = passes.get(skill, 0), fails.get(skill, 0)
 
@@ -98,6 +107,7 @@ def build(registry_root: Path | str = "registry",
                 "x": round(sum(scores) / len(scores), 4) if scores else None,
                 "y": round(p / (p + f), 4) if (p + f) else None,
                 "size": n if n else None,
+                "selected": sel if sel else None,
                 "citations": cites,
             })
 
@@ -112,7 +122,8 @@ def build(registry_root: Path | str = "registry",
                 "two rules of one skill are indistinguishable on this axis today."
             ),
             "y": "exercise pass rate for the owning skill; null if never exercised",
-            "size": "consultation count; null if never consulted",
+            "size": "consultation count; null if never consulted. Identical across skills by construction, because retrieval scores every skill on every query.",
+            "selected": "times this skill ranked first in a lookup; null if never. This is the discriminating quantity, and coverage reads it.",
             "null_means": (
                 "no observation exists. Render at a neutral gutter position, not at zero. "
                 "Zero is an observation that something scored nothing; null is the absence "
@@ -156,7 +167,8 @@ DIMS = ["relevance", "pass_rate", "specificity", "recency",
 EMB_DIMS = len(DIMS)
 
 
-def _embedding(rule: dict, newest: float | None = None, oldest: float | None = None) -> list:
+def _embedding(rule: dict, newest: float | None = None, oldest: float | None = None,
+               busiest: int | None = None) -> list:
     """emb[8] in the dashboard's dimension order, with null where nothing was observed.
 
     relevance  mean retrieval score when the rule's skill was consulted
@@ -168,10 +180,10 @@ def _embedding(rule: dict, newest: float | None = None, oldest: float | None = N
     null rather than zero or a filler value: zero is an observation that something scored
     nothing, and a filler would render as a position the rule does not have.
     """
-    size = rule.get("size")
+    sel = rule.get("selected")
     coverage = None
-    if size:
-        coverage = min(1.0, size / 20.0)
+    if sel and busiest:
+        coverage = round(min(1.0, sel / busiest), 4)
 
     recency = None
     ts = rule.get("_exercised_epoch")
@@ -216,6 +228,7 @@ def build_skillearn(registry_root: Path | str = "registry",
                 except Exception:
                     pass
 
+    busiest = max((r.get("selected") or 0) for r in rules) if rules else 0
     stamps = [exercised_at[r["skill"]] for r in rules if r["skill"] in exercised_at]
     newest, oldest = (max(stamps), min(stamps)) if stamps else (None, None)
     for r in rules:
@@ -231,7 +244,7 @@ def build_skillearn(registry_root: Path | str = "registry",
         "consults": r["size"],                  # null when never consulted, per the null rule
         "citations": r["citations"],
         "exercised_hash": hashes.get(r["skill"]),
-        "emb": _embedding(r, newest, oldest),
+        "emb": _embedding(r, newest, oldest, busiest),
     } for r in rules]
 
     events = []
