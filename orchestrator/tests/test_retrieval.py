@@ -8,9 +8,13 @@ feeds is decorative.
 
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest import mock
 
+from orchestrator import events as ev
 from orchestrator.retrieval import SkillIndex, TfidfEmbedder, cosine, tokenize
 
 REGISTRY = Path("registry")
@@ -130,3 +134,45 @@ class IndexTests(unittest.TestCase):
             empty = SkillIndex(Path(tmp)).build()
             self.assertEqual(empty.signatures, [])
             self.assertEqual(empty.search("anything"), [])
+
+
+class PerRuleAttributionTests(unittest.TestCase):
+    """A rule's relevance must be its own, not its skill's copied down."""
+
+    def _consultations(self, task: str) -> list[dict]:
+        """Capture emitted events rather than redirecting the log.
+
+        `events.append` binds its default path at definition time, so patching the module's
+        EVENTS constant does not redirect a write. Capturing the call is both simpler and a
+        stricter assertion: it checks what retrieval emitted, not what a file ended up with.
+        """
+        seen: list[dict] = []
+
+        def capture(event_type, skill, rule_id=None, payload=None, **kw):
+            seen.append({"event_type": event_type, "skill": skill,
+                         "rule_id": rule_id, "payload": payload or {}})
+            return {}
+
+        with mock.patch.object(ev, "append", capture):
+            SkillIndex("registry").build().search(task)
+        return seen
+
+    def test_a_lookup_emits_a_consultation_per_rule(self):
+        per_rule = [e for e in self._consultations(
+            "extract structured facts from a competitor page") if e["rule_id"]]
+        self.assertTrue(per_rule, "no rule-attributed consultation was emitted")
+        self.assertTrue(all(e["payload"]["source"] == "rule" for e in per_rule))
+
+    def test_rules_of_one_skill_do_not_all_score_the_same(self):
+        """The defect this replaces. If every rule of a skill carries one score, every rule
+        of that skill lands on one point and the map shows skills wearing rule labels."""
+        by_skill: dict[str, set] = {}
+        for e in self._consultations(
+                "extract structured facts from a competitor pricing page"):
+            if e["rule_id"]:
+                by_skill.setdefault(e["skill"], set()).add(e["payload"]["score"])
+        self.assertTrue(
+            {k: v for k, v in by_skill.items() if len(v) > 1},
+            "every rule scored identically to its siblings across every skill, which means "
+            "rule text is not reaching the scorer",
+        )
