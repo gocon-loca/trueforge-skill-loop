@@ -215,6 +215,7 @@ class SkillIndex:
         self.root = Path(registry_root)
         self.embedder = embedder or TfidfEmbedder()
         self.signatures: list[SkillSignature] = []
+        self._rule_docs: dict[str, list] = {}
         self._vectors: dict[str, dict[str, float]] = {}
 
     # ---- building -------------------------------------------------------------
@@ -296,6 +297,29 @@ class SkillIndex:
 
     # ---- lookup ---------------------------------------------------------------
 
+    def _rule_documents(self, skill_name: str) -> list[tuple[str, str]]:
+        """(rule_id, text) for each numbered rule in a skill's Method section.
+
+        Retrieval ranks skills, so without this every rule of a skill inherits one score and
+        is indistinguishable from its siblings. Scoring a rule's own text against the task is
+        a real per-rule observation rather than a per-skill number copied down.
+        """
+        cached = self._rule_docs.get(skill_name)
+        if cached is not None:
+            return cached
+        docs: list[tuple[str, str]] = []
+        d = Path(self.root) / skill_name
+        body_file = d / "SKILL.md"
+        if body_file.is_file():
+            body = body_file.read_text(encoding="utf-8")
+            section = re.search(r"^## Method\s*$(.*?)(?=^## |\Z)", body,
+                                re.MULTILINE | re.DOTALL)
+            if section:
+                for m in re.finditer(r"^(\d+)\.\s+(.*)$", section.group(1), re.MULTILINE):
+                    docs.append((f"{skill_name}#{m.group(1)}", " ".join(m.group(2).split())))
+        self._rule_docs[skill_name] = docs
+        return docs
+
     def search(self, task_description: str, limit: int | None = None,
                emit: bool = True) -> list[Candidate]:
         """Rank every skill against a task description. Returns all of them, scored.
@@ -347,6 +371,24 @@ class SkillIndex:
                             "source": "live",
                         },
                     )
+
+                    # The same lookup, attributed to each rule of the skill. Without this a
+                    # rule's relevance is its skill's relevance, and every rule of a skill
+                    # lands on one point.
+                    for rule_id, rule_text in self._rule_documents(c.signature.name):
+                        rule_score = cosine(query, self.embedder.embed(rule_text))
+                        _events.append(
+                            _events.CONSULTATION,
+                            skill=c.signature.name,
+                            rule_id=rule_id,
+                            payload={
+                                "task": task_description[:200],
+                                "score": round(rule_score, 4),
+                                "rank": rank,
+                                "source": "rule",
+                                "components": {"body": round(rule_score, 4)},
+                            },
+                        )
             except Exception:
                 pass
 

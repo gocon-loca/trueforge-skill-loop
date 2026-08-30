@@ -31,17 +31,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "read-more-think-more"
       ],
       "exercised_hash": "5955b21d95aca49a3ba593ef13f4062092cfc86b94e590b66037cf17a4bd30e1",
       "emb": [
-        0.0447,
+        0.005,
         1.0,
         null,
         1.0,
-        0.5556,
+        0.5263,
         null,
         null,
         null
@@ -54,17 +54,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "lineretriever-planning-aware-observation"
       ],
       "exercised_hash": "5955b21d95aca49a3ba593ef13f4062092cfc86b94e590b66037cf17a4bd30e1",
       "emb": [
-        0.0447,
+        0.0372,
         1.0,
         null,
         1.0,
-        0.5556,
+        0.5263,
         null,
         null,
         null
@@ -77,17 +77,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "web-for-agents"
       ],
       "exercised_hash": "7d1cd5ed95787ce1b52167b82285329d7e0c48db4175be36f227e8ffa27ae36d",
       "emb": [
-        0.0824,
+        0.0377,
         1.0,
         null,
         0.0,
-        0.8519,
+        1.0,
         null,
         null,
         null
@@ -100,18 +100,18 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "dom-downsampling",
         "revisiting-observation-reduction-for"
       ],
       "exercised_hash": "7d1cd5ed95787ce1b52167b82285329d7e0c48db4175be36f227e8ffa27ae36d",
       "emb": [
-        0.0824,
+        0.0368,
         1.0,
         null,
         0.0,
-        0.8519,
+        1.0,
         null,
         null,
         null
@@ -124,17 +124,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "webvoyager"
       ],
       "exercised_hash": "7d1cd5ed95787ce1b52167b82285329d7e0c48db4175be36f227e8ffa27ae36d",
       "emb": [
-        0.0824,
+        0.002,
         1.0,
         null,
         0.0,
-        0.8519,
+        1.0,
         null,
         null,
         null
@@ -147,17 +147,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "transitive-closure-collapse"
       ],
       "exercised_hash": "203d757ae5c19b09d0ac1d44168a39270fea6ecdc9456a07a05b27957fc0d6cd",
       "emb": [
-        0.0529,
+        0.0172,
         1.0,
         null,
         0.3448,
-        0.5556,
+        0.5789,
         null,
         null,
         null
@@ -170,17 +170,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "linkage-uncertainty"
       ],
       "exercised_hash": "203d757ae5c19b09d0ac1d44168a39270fea6ecdc9456a07a05b27957fc0d6cd",
       "emb": [
-        0.0529,
+        0.0,
         1.0,
         null,
         0.3448,
-        0.5556,
+        0.5789,
         null,
         null,
         null
@@ -193,17 +193,17 @@
       "provenance": "research",
       "trusted": true,
       "version": 4,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "blocking-before-comparison"
       ],
       "exercised_hash": "203d757ae5c19b09d0ac1d44168a39270fea6ecdc9456a07a05b27957fc0d6cd",
       "emb": [
-        0.0529,
+        0.0197,
         1.0,
         null,
         0.3448,
-        0.5556,
+        0.5789,
         null,
         null,
         null
@@ -216,17 +216,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "channel-read-first"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0238,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -239,17 +239,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "receipt-before-processing"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0064,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -262,17 +262,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "acknowledged-not-applied"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0029,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -285,17 +285,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "watchdog-on-new-information"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0034,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -308,17 +308,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "absent-signal-is-not-evidence"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0047,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -331,17 +331,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "verify-before-relaying"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0036,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -354,17 +354,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "never-confirm-without-evidence"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0034,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
@@ -377,17 +377,17 @@
       "provenance": "incident",
       "trusted": true,
       "version": 1,
-      "consults": 80,
+      "consults": 57,
       "citations": [
         "escalate-then-default"
       ],
       "exercised_hash": "4b3b4d79f902dd9a884e4d360a5233fab7c75014290ae41da19d68c96c6d3b6c",
       "emb": [
-        0.0425,
+        0.0018,
         1.0,
         null,
         0.6735,
-        1.0,
+        0.8947,
         null,
         null,
         null
