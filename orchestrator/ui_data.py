@@ -138,6 +138,7 @@ SKILLEARN = Path("ui") / "data" / "skillearn.json"
 _EVENT_TYPE_MAP = {
     "mint": "mint",
     "amend": "mint",              # an amend produces a new rule body, which the mock draws as a mint
+
     "exercise_pass": "pass",
     "exercise_fail": "fail",
     "trust_revoked": "revoke",
@@ -145,21 +146,49 @@ _EVENT_TYPE_MAP = {
     "decision": "deviation",
 }
 
-EMB_DIMS = 8
 
 
-def _embedding(rule: dict) -> list:
-    """The mock expects emb[8]. We have observations, not an 8-dimensional vector.
+# The dashboard's dimension order. Four carry real observations; four have no data source
+# and stay null. A null contributes nothing to the 3D projection, which is the honest
+# rendering: an unobserved dimension should not push a node anywhere.
+DIMS = ["relevance", "pass_rate", "specificity", "recency",
+        "coverage", "risk", "novelty", "stability"]
+EMB_DIMS = len(DIMS)
 
-    Real quantities go in the leading slots and the rest are null. Nothing is fabricated to
-    fill the shape: a padded null reads as absent, whereas a zero or a random value would
-    render as a position the rule does not have, which is the same error the null rule in
-    evidence.json exists to prevent, one file over.
+
+def _embedding(rule: dict, newest: float | None = None, oldest: float | None = None) -> list:
+    """emb[8] in the dashboard's dimension order, with null where nothing was observed.
+
+    relevance  mean retrieval score when the rule's skill was consulted
+    pass_rate  exercise pass rate for the owning skill
+    recency    how recently the skill was exercised, scaled across the registry
+    coverage   consultation count, scaled
+
+    specificity, risk, novelty and stability have no data source in this repository. They are
+    null rather than zero or a filler value: zero is an observation that something scored
+    nothing, and a filler would render as a position the rule does not have.
     """
-    observed = [rule.get("x"), rule.get("y"),
-                (rule.get("size") / 10.0) if rule.get("size") else None,
-                1.0 if rule.get("trusted") else 0.0]
-    return observed + [None] * (EMB_DIMS - len(observed))
+    size = rule.get("size")
+    coverage = None
+    if size:
+        coverage = min(1.0, size / 20.0)
+
+    recency = None
+    ts = rule.get("_exercised_epoch")
+    if ts and newest and oldest is not None:
+        span = (newest - oldest) or 1.0
+        recency = round(max(0.0, min(1.0, (ts - oldest) / span)), 4)
+
+    return [
+        rule.get("x"),      # relevance
+        rule.get("y"),      # pass_rate
+        None,               # specificity
+        recency,            # recency
+        coverage,           # coverage
+        None,               # risk
+        None,               # novelty
+        None,               # stability
+    ]
 
 
 def build_skillearn(registry_root: Path | str = "registry",
@@ -169,13 +198,28 @@ def build_skillearn(registry_root: Path | str = "registry",
     rules = data["rules"]
     index_of = {r["rule_id"]: i for i, r in enumerate(rules)}
 
+    import datetime
     import yaml
     hashes = {}
+    exercised_at = {}
     for d in sorted(p for p in Path(registry_root).iterdir() if p.is_dir()):
         mf = d / "meta.yaml"
         if mf.is_file():
             m = yaml.safe_load(mf.read_text(encoding="utf-8")) or {}
-            hashes[m.get("name", d.name)] = m.get("exercised_hash")
+            nm = m.get("name", d.name)
+            hashes[nm] = m.get("exercised_hash")
+            raw = m.get("exercised_at")
+            if raw:
+                try:
+                    exercised_at[nm] = datetime.datetime.fromisoformat(
+                        str(raw).replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    pass
+
+    stamps = [exercised_at[r["skill"]] for r in rules if r["skill"] in exercised_at]
+    newest, oldest = (max(stamps), min(stamps)) if stamps else (None, None)
+    for r in rules:
+        r["_exercised_epoch"] = exercised_at.get(r["skill"])
 
     out_rules = [{
         "rule_id": r["rule_id"],
@@ -187,7 +231,7 @@ def build_skillearn(registry_root: Path | str = "registry",
         "consults": r["size"],                  # null when never consulted, per the null rule
         "citations": r["citations"],
         "exercised_hash": hashes.get(r["skill"]),
-        "emb": _embedding(r),
+        "emb": _embedding(r, newest, oldest),
     } for r in rules]
 
     events = []
@@ -203,6 +247,10 @@ def build_skillearn(registry_root: Path | str = "registry",
                 if r_id.startswith(f"{e['skill']}#"):
                     idx = i
                     break
+        if idx is None:
+            # an event nothing can be attributed to would render against a rule chosen at
+            # random, so it is dropped rather than guessed at
+            continue
         events.append({
             "t": e["ts"],
             "type": mapped,
@@ -220,8 +268,9 @@ def build_skillearn(registry_root: Path | str = "registry",
             "observe skills rather than individual rules."
         ),
         "emb_dims": EMB_DIMS,
-        "emb_meaning": ["mean_retrieval_score", "exercise_pass_rate",
-                        "consult_count_over_10", "trusted", None, None, None, None],
+        "emb_meaning": DIMS,
+        "emb_observed": ["relevance", "pass_rate", "recency", "coverage"],
+        "emb_null": ["specificity", "risk", "novelty", "stability"],
         "rules": out_rules,
         "events": events,
     }

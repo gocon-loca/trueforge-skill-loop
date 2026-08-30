@@ -16,3 +16,4 @@ dist/
 .playwright-mcp/
 data/papers.json
 data/*.json
+data/*.jsonl

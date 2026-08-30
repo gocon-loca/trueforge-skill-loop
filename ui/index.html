@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{{const n=new URLSearchParams(location.search).get("theme");if(n==="light"||n==="dark"){document.documentElement.dataset.theme=n}}{if(new URLSearchParams(location.search).get("_omthumb")==="1"){const n=(f)=>{const g=f.focus;if(!g)return;f.focus=function(h){g.call(this,{...h,preventScroll:true})}};n(HTMLElement.prototype);n(SVGElement.prototype);if(typeof MathMLElement!=="undefined"){n(MathMLElement.prototype)}const d=(f)=>{f.removeAttribute("autofocus");f.inert=true;if(!(f instanceof HTMLElement))f.removeAttribute("tabindex")};const p=(f)=>{if(f.hasAttribute("autofocus"))d(f);for(const g of f.querySelectorAll("[autofocus]")){d(g)}};p(document.documentElement);new MutationObserver((f)=>{for(const g of f){for(const h of g.addedNodes){if(h.nodeType===1)p(h)}}}).observe(document,{childList:true,subtree:true})}}{const n=()=>{try{if(document.querySelector('meta[name="color-scheme"]'))return;const d=getComputedStyle(document.documentElement).getPropertyValue("color-scheme").trim();if(d&&d!=="normal")return;const p=(y)=>{if(!y)return null;const m=getComputedStyle(y).backgroundColor.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);if(!m)return null;const w=m[4]==null?1:parseFloat(m[4])/(m[4].endsWith("%")?100:1);if(w<0.99)return null;return[+m[1],+m[2],+m[3]]};const f=p(document.body)||p(document.documentElement);if(!f)return;const g=(y)=>{const m=y/255;return m<=0.04045?m/12.92:((m+0.055)/1.055)**2.4};const h=0.2126*g(f[0])+0.7152*g(f[1])+0.0722*g(f[2]);document.documentElement.style.setProperty("color-scheme",h<0.4?"dark":"light")}catch{}};if(document.readyState==="complete")n();else window.addEventListener("load",n)}var I=["https://claude.ai","https://preview.claude.ai","https://54db0df7-f176-4d73-99d6-5fc30fcfb903.claudeusercontent.com"];var B=true;var K=false;var C=()=>{};if(K===true){try{const n=setTimeout.bind(window);const d=1e4;const p=15;const f=1e4;const g=120000;const h=200;const y=(o)=>{try{let r;if(typeof o==="string")r=o;else if(o instanceof URL)r=o.href;else if(typeof Request!=="undefined"&&o instanceof Request)r=o.url;else return null;if(!r)return null;const l=document.baseURI;const i=new URL(r,l);if(i.protocol!=="http:"&&i.protocol!=="https:")return null;if(i.origin!==new URL(l).origin)return null;return i.origin+i.pathname}catch{return null}};const m=new Map;const w=(o)=>{let r=m.get(o);if(!r){if(m.size>=h){const l=m.keys().next().value;if(l!==undefined)m.delete(l)}r={fails:[],until:0,cooldown:f,hard:false};m.set(o,r)}return r};const R=(o)=>{const r=m.get(o);return r!==undefined&&r.until>Date.now()};const O=(o,r)=>{const l=Date.now();const i=w(o);if(r)i.hard=true;if(i.until>l)return;i.fails.push(l);while(i.fails.length>0&&i.fails[0]<=l-d)i.fails.shift();if(i.fails.length>=p){i.until=l+i.cooldown;if(i.hard)i.cooldown=Math.min(i.cooldown*2,g);i.fails.length=0;try{n(()=>{try{S(true)}catch{}},i.until-l+100)}catch{}console.warn("[omelette] asset circuit breaker: pausing requests to "+o+" for "+Math.round((i.until-l)/1000)+"s after "+p+" failures in "+d/1000+"s")}};const e=(o)=>{m.delete(o)};const t=100;const a=new WeakMap;const u=new Set;let s=null;const S=(o)=>{for(const r of Array.from(u)){try{const l=a.get(r);if(l===undefined){u.delete(r);continue}if(o){const i=y(l);if(i!==null&&R(i))continue}a.delete(r);u.delete(r);if(s!==null)s.call(r,l)}catch{}}};C=()=>{try{m.clear();S(false)}catch{}};document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")C()});const _=window.fetch;if(typeof _==="function"){const o=function(...r){let l=null;try{l=y(r[0])}catch{}if(l!==null&&R(l)){let c;try{if(r[1]&&r[1].signal!==undefined){c=r[1].signal||undefined}else if(typeof Request!=="undefined"&&r[0]instanceof Request){c=r[0].signal||undefined}}catch{c=undefined}return new Promise((k,b)=>{const E=()=>{try{return c.reason!==undefined?c.reason:new DOMException("The operation was aborted.","AbortError")}catch{return new DOMException("The operation was aborted.","AbortError")}};try{if(c&&c.aborted){b(E());return}}catch{}let T=false;const j=()=>{if(T)return;T=true;b(E())};try{if(c)c.addEventListener("abort",j,{once:true})}catch{}n(()=>{if(T)return;T=true;try{if(c)c.removeEventListener("abort",j)}catch{}let L;try{L=new Response(null,{status:429,statusText:"Too Many Requests",headers:{"Retry-After":"10"}})}catch{L={ok:false,status:429}}k(L)},250)})}const i=_.apply(window,r);if(l!==null){const c=l;i.then((k)=>{try{if(k.ok)e(c);else if(k.status===401||k.status===403||k.status===404||k.status===429){O(c,k.status!==404)}}catch{}},()=>{})}return i};window.fetch=o}const v=Object.getOwnPropertyDescriptor(HTMLImageElement.prototype,"src");if(v!==undefined&&v.set!==undefined&&v.get!==undefined){const o=v.set;s=o;Object.defineProperty(HTMLImageElement.prototype,"src",{configurable:true,enumerable:v.enumerable,get:v.get,set(r){const l=`${r}`;try{const i=y(l);if(i!==null&&R(i)){a.set(this,l);if(u.size<t)u.add(this);return}}catch{}try{a.delete(this);u.delete(this)}catch{}o.call(this,l)}})}try{const o=HTMLImageElement.prototype.setAttribute;HTMLImageElement.prototype.setAttribute=function(r,l){if(arguments.length<2){o.apply(this,arguments);return}if(typeof r==="string"&&r.toLowerCase()==="src"){const i=`${l}`;try{const c=y(i);if(c!==null&&R(c)){a.set(this,i);if(u.size<t)u.add(this);return}a.delete(this);u.delete(this)}catch{}o.call(this,r,i);return}o.call(this,r,l)}}catch{}window.addEventListener("error",(o)=>{try{const r=o.target;if(r instanceof HTMLImageElement){const l=y(r.currentSrc||r.src||"");if(l!==null)O(l,true)}}catch{}},true);window.addEventListener("load",(o)=>{try{const r=o.target;if(r instanceof HTMLImageElement){const l=y(r.currentSrc||r.src||"");if(l!==null)e(l);const i=a.get(r);if(i!==undefined){let c=false;try{c=new URL(i,document.baseURI).href===new URL(r.currentSrc||r.src||"",document.baseURI).href}catch{c=false}if(c){a.delete(r);u.delete(r)}}}}catch{}},true)}catch{}}var J=30000;var G=3000;document.addEventListener("DOMContentLoaded",()=>{const n=window.Babel;const d="om-src-id";if(n&&n.registerPlugin&&!(n.availablePlugins&&n.availablePlugins[d])){n.registerPlugin(d,({types:h})=>({visitor:{JSXOpeningElement(y,m){const w=y.node;if(w.name&&w.name.type==="JSXMemberExpression")return;for(let t=0;t<w.attributes.length;t++){const a=w.attributes[t];if(a.type==="JSXAttribute"&&a.name&&a.name.name==="data-om-id")return}const R=m.file&&m.file.opts&&m.file.opts.filename||"?";const O=w.loc&&w.loc.start;const e=`jsx:${R}:${w.start??0}:${O?O.line:0}:${O?O.column+1:0}`;w.attributes.push(h.jsxAttribute(h.jsxIdentifier("data-om-id"),h.stringLiteral(e)))}}}))}const p="om-text-extract";let f=false;if(B&&n&&n.registerPlugin&&!(n.availablePlugins&&n.availablePlugins[p])){const h=window.React;if(h&&h.useSyncExternalStore&&h.createElement){f=true;const y={};const m=new Set;let w=0;window.__omTextO=y;window.__omTextSet=(e)=>{for(const t in e){const a=e[t];if(a==null)delete y[t];else y[t]=a}w++;m.forEach((t)=>t())};const R=(e)=>{m.add(e);return()=>m.delete(e)};const O=()=>w;window.__OmT=function e(t){h.useSyncExternalStore(R,O,O);return h.createElement("span",{"data-om-text":t.i,className:"__om-t"},t.i in y?y[t.i]:t.children)};n.registerPlugin(p,({types:e})=>{const t={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const a={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const u=(o,r)=>e.logicalExpression("??",e.memberExpression(e.logicalExpression("||",e.memberExpression(e.identifier("window"),e.identifier("__omTextO")),e.objectExpression([])),e.stringLiteral(o),true),r);const s=(o)=>o.file&&o.file.opts&&o.file.opts.filename||"?";const S=(o)=>o.file&&o.file.code||"";const _=(o,r)=>{const l=(c)=>c&&c.start!=null&&c.end!=null&&(c.type==="StringLiteral"||c.type==="TemplateLiteral"&&c.expressions.length===0)?[c.start,c.end]:null;const i=l(r);if(i)return i;if(r&&r.type==="Identifier"){const c=o.scope.getBinding(r.name);if(c&&c.constant&&c.path.node.type==="VariableDeclarator"){return l(c.path.node.init)}}return null};const v=(o,r,l)=>{const i=o.node;let c=false;const k=(E,T)=>{c=true;return e.jsxElement(e.jsxOpeningElement(e.jsxIdentifier("__OmT"),[e.jsxAttribute(e.jsxIdentifier("i"),e.stringLiteral(E))],false),e.jsxClosingElement(e.jsxIdentifier("__OmT")),[T],false)};const b=i.children.map((E)=>{if(E.type==="JSXText"){if(E.start==null||E.end==null)return E;const T=l.slice(E.start,E.end);const j=T.length-T.trimStart().length;const L=T.length-T.trimEnd().length;if(j+L>=T.length)return E;return k(`txt:${r}:${E.start+j}:${E.end-L}`,E)}if(E.type==="JSXExpressionContainer"){const T=_(o,E.expression);if(T)return k(`str:${r}:${T[0]}:${T[1]}`,E)}return E});if(c)i.children=b};return{visitor:{JSXOpeningElement(o,r){const l=o.node;const i=s(r);const c={};for(let k=0;k<l.attributes.length;k++){const b=l.attributes[k];if(b.type!=="JSXAttribute"||!b.name)continue;const E=b.name.name;if(!a[E])continue;if(!b.value||b.value.type!=="StringLiteral")continue;if(b.value.start==null||b.value.end==null)continue;const T=`txt:${i}:${b.value.start}:${b.value.end}`;c[E]=T;b.value=e.jsxExpressionContainer(u(T,e.stringLiteral(b.value.value)))}if(Object.keys(c).length){l.attributes.push(e.jsxAttribute(e.jsxIdentifier("data-om-text-attrs"),e.stringLiteral(JSON.stringify(c))))}},JSXElement(o,r){const l=o.node.openingElement;const i=l&&l.name&&l.name.name;if(i==="__OmT")return;if(typeof i==="string"&&t[i])return;v(o,s(r),S(r))},JSXFragment(o,r){v(o,s(r),S(r))}}}})}}const g=f?["transform-react-jsx-source",d,p]:["transform-react-jsx-source",d];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((h,y)=>{const m=h.getAttribute("data-plugins")||"";const w=g.filter((R)=>m.indexOf(R)<0);if(w.length){h.setAttribute("data-plugins",m?`${m},${w.join(",")}`:w.join(","))}if(!h.hasAttribute("data-filename")){h.setAttribute("data-filename",h.getAttribute("src")||`inline-${y}`)}})});var A=window.parent;var U="not editable here — open the project in the Claude Design editor to save";var W=()=>Promise.resolve({persisted:false,noHost:true,reason:U});var H=W;var M="data/storage.json";var z=()=>{try{const n=new URL(document.baseURI);const d=n.pathname.match(/\/projects\/([^/]+)\/serve\//);if(d)return d[1];return n.hostname.split(".")[0]||""}catch{return location.hostname.split(".")[0]||""}};var Z=()=>{try{const n=new URL(document.baseURI);const d=n.pathname.indexOf("/serve/");if(d>=0)return n.origin+n.pathname.slice(0,d+"/serve/".length)+M}catch{}return"./"+M};var x=null;var N=()=>{if(!x){x=fetch(Z(),{cache:"no-store"}).then((n)=>{if(n.ok)return n.text();return n.status===404?"":null}).catch(()=>null).then((n)=>{if(n===null){x=null;return null}const d=new Map;if(!n)return d;let p;try{p=JSON.parse(n)}catch{console.warn("[omelette.storage] "+M+" is not valid JSON; treating the store as unreadable so a save cannot overwrite the "+"hand-edited bytes. Fix the JSON (or delete the file) to re-enable persistence.");x=null;return null}if(p===null||typeof p!=="object"||Array.isArray(p)){console.warn("[omelette.storage] "+M+" doesn't hold a JSON object; treating the store as unreadable so a save cannot "+"overwrite the hand-edited bytes. Make the top level a JSON object to re-enable persistence.");x=null;return null}const f=p;if("data"in f){const g=f.data;if(g===null||typeof g!=="object"||Array.isArray(g)){console.warn("[omelette.storage] "+M+' has a "data" field that is not a JSON object; treating the store as unreadable so a '+'save cannot overwrite the hand-edited bytes. Make "data" a JSON object to re-enable persistence.');x=null;return null}const h=f._meta;const y=h!==null&&typeof h==="object"?h.project:undefined;if(typeof y==="string"&&y!==""&&y!==z())return d;for(const m of Object.keys(g))d.set(m,g[m]);return d}for(const g of Object.keys(f)){if(g!=="_meta")d.set(g,f[g])}return d})}return x};var F=(n)=>H(M,JSON.stringify({_meta:{project:z(),version:1},data:Object.fromEntries(n)},null,2));var D=Promise.resolve();var $=(n)=>{const d=D.then(n);D=d.then(()=>{return},()=>{return});return d};var V=/sk-(?:ant-)?[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[a-z]-[A-Za-z0-9][A-Za-z0-9-]{9,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/;var Y=/password|passwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|credential/i;var Q=(n,d,p)=>{if(V.test(d)||Y.test(n)&&typeof p==="string"&&p.length>=8){console.warn('[omelette.storage] the value for "'+n+'" looks like a credential. The storage file is a plaintext project file — visible to '+"everyone with project access and copied when the project is duplicated. Do not store secrets here.")}};var q={persisted:false,reason:"could not load the existing store — not overwriting it"};var X={persisted:false,reason:"stored value changed since a failed read — re-read this key before saving"};var P=new Set;var ee={get:(n)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.get: key must be a string"))}return $(N).then((d)=>{if(d===null){P.add(n);return null}P.delete(n);if(!d.has(n))return null;const p=d.get(n);return p==null?null:JSON.parse(JSON.stringify(p))})},set:(n,d)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.set: key must be a string"))}let p;try{p=JSON.stringify(d)}catch(g){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable ("+String(g)+")"))}if(p===undefined){return Promise.reject(new TypeError("storage.set: value must be JSON-serializable"))}Q(n,p,d);const f=JSON.parse(p);return $(()=>N().then((g)=>{if(g===null)return q;if(P.has(n)){if(g.has(n))return X;P.delete(n)}g.set(n,f);return F(g)}))},delete:(n)=>{if(typeof n!=="string"){return Promise.reject(new TypeError("storage.delete: key must be a string"))}return $(()=>N().then((d)=>{if(d===null)return q;if(P.has(n)){if(d.has(n))return X;P.delete(n)}d.delete(n);return F(d)}))},keys:()=>$(N).then((n)=>n===null?[]:Array.from(n.keys()))};window.omelette={writeFile:(n,d)=>H(n,d).then((p)=>{if(!p.persisted&&!p.noHost){throw new Error(p.reason||"write failed")}}),storage:ee};if(A&&A!==window){const n=(e,t)=>{try{A.postMessage({__omelette_log:true,type:e,data:t},"*")}catch{}};["log","warn","error"].forEach((e)=>{const t=console[e];console[e]=(...a)=>{const u=a.map((s)=>{try{return typeof s==="object"?JSON.stringify(s):String(s)}catch{try{return String(s)}catch{return"[unstringifiable]"}}}).join(" ");n(e,u);t.apply(console,a)}});window.addEventListener("error",(e)=>{const t=e.target;if(t&&t!==window&&t.tagName){const a=t.src||t.href||"";n("resource_error",`${t.tagName} failed to load: ${a}`)}else{n("error",`${e.message||"Unknown error"} at ${e.filename||"?"}:${e.lineno||0}:${e.colno||0}`)}},true);window.addEventListener("unhandledrejection",(e)=>{const t=e.reason;const a=t instanceof Error?`${t.message} ${t.stack}`:String(t);n("error",`Unhandled rejection: ${a}`)});window.addEventListener("click",(e)=>{if(e.defaultPrevented||e.button!==0)return;if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;const t=e.composedPath?e.composedPath():[];const a=["button","input","select","textarea","summary","label"];let u=null;for(const v of t){if(!(v instanceof Element))continue;if(v.localName==="a"){if(!(v instanceof HTMLAnchorElement))return;u=v;break}if(a.indexOf(v.localName)!==-1)return}if(!u)return;if(u.isContentEditable)return;const s=u.closest("[contenteditable]");if(s&&s.getAttribute("contenteditable")!=="false")return;const S=(u.getAttribute("target")||"_self").toLowerCase();if(S!=="_self"&&S!=="_top"&&S!=="_parent")return;let _;try{_=new URL(u.href)}catch{return}if(_.protocol!=="http:"&&_.protocol!=="https:")return;if(location.origin==="null")return;if(_.origin===location.origin)return;e.preventDefault();window.open(_.href,"_blank","noopener,noreferrer")});const d=()=>{try{A.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(window.ResizeObserver)new ResizeObserver(d).observe(document.documentElement);const p=()=>{d();if(!document.querySelector('script[type="text/babel"],script[type="text/jsx"]'))return;const e=()=>document.getElementById("root")||document.querySelector("body > div[id]");const t=e()?.firstElementChild??null;let a=0;const u=()=>{const s=e();if(s&&s.firstElementChild!==t||++a>30){d();return}setTimeout(u,100)};setTimeout(u,100)};if(document.readyState==="complete")p();else window.addEventListener("load",p);const f={};let g=0;const h=(e)=>new Promise((t,a)=>{if(!I.length){a(new Error("claude.complete: no parent origin"));return}const u=`c${++g}`;const s=()=>setTimeout(()=>{delete f[u];a(new Error(`claude.complete: no data for ${J/1000}s`))},J);const S=s();f[u]={resolve:t,reject:a,text:"",t:S,arm:s};try{for(const _ of I){A.postMessage({__om_api:true,id:u,body:e},_)}}catch(_){clearTimeout(S);delete f[u];a(_)}});const y=8;const m=async(e,t)=>{if(!Array.isArray(e.messages)){throw new Error("claude.complete: tools require a messages array")}const a=e.messages.slice();const u={...e,tools:e.tools.map((_)=>{if(_===null||typeof _!=="object")return _;const v={};for(const o of Object.keys(_)){if(typeof _[o]!=="function")v[o]=_[o]}return v})};const s=u.tool_choice;const S=s!=null&&(s.type==="any"||s.type==="tool")?{...u,tool_choice:s.disable_parallel_tool_use!==undefined?{type:"auto",disable_parallel_tool_use:s.disable_parallel_tool_use}:{type:"auto"}}:u;for(let _=0;_<y;_++){const v=await h({..._===0?u:S,messages:a});const o=v.message;const r=o&&Array.isArray(o.content)?o.content:null;const l=r?r.filter((c)=>c?.type==="tool_use"):[];if(o?.stop_reason!=="tool_use"||l.length===0){return v.text}const i=[];for(const c of l){const k=t.get(c.name);if(!k){i.push({type:"tool_result",tool_use_id:c.id,content:`no handler for tool "${c.name}"`,is_error:true});continue}try{const b=await k(c.input);const E=typeof b==="string"?b:O(b)??"";i.push({type:"tool_result",tool_use_id:c.id,content:E})}catch(b){i.push({type:"tool_result",tool_use_id:c.id,content:String(b?.message??b??"tool handler failed"),is_error:true})}}a.push({role:"assistant",content:r},{role:"user",content:i})}throw new Error(`claude.complete: exceeded ${y} tool turns`)};window.claude={complete(e){const t=e;if(t!==null&&typeof t==="object"&&Array.isArray(t.tools)&&t.tools.some((a)=>a!==null&&typeof a==="object"&&typeof a.run==="function")){const a=new Map;for(const u of t.tools){if(u!==null&&typeof u==="object"&&typeof u.run==="function"){a.set(String(u.name),u.run)}}return m(t,a)}return h(e).then((a)=>a.text)}};const w={};let R=0;H=(e,t)=>new Promise((a)=>{if(!I.length){a({persisted:false,noHost:true,reason:U});return}const u=`f${++R}`;const s=setTimeout(()=>{delete w[u];a({persisted:false,noHost:true,reason:U})},G);w[u]={settle:a,t:s};try{for(const S of I){A.postMessage({__om_file:true,id:u,op:"write",path:e,content:t},S)}}catch{clearTimeout(s);delete w[u];a({persisted:false,noHost:true,reason:U})}});const O=(e)=>{try{return JSON.stringify(e)}catch{return JSON.stringify(String(e))}};window.addEventListener("message",(e)=>{if(I.indexOf(e.origin)<0)return;if(e.source!==A)return;const t=e.data;if(!t)return;if(t.type==="omelette-preview-refresh"){if(typeof t.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(t.token))return;const s=Math.max(1,Math.floor((t.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+t.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+s;C();return}if(t.__om_file_r){const s=w[t.id];if(!s)return;clearTimeout(s.t);delete w[t.id];s.settle(t.ok?{persisted:true}:{persisted:false,reason:t.error||"write failed"});return}if(t.__om_api_r){const s=f[t.id];if(!s)return;if(t.error!=null){clearTimeout(s.t);delete f[t.id];s.reject(new Error(t.error));return}if(t.chunk!=null){clearTimeout(s.t);s.t=s.arm();s.text+=t.chunk;return}if(t.done){clearTimeout(s.t);delete f[t.id];s.resolve({text:t.text!=null?t.text:s.text,message:t.message});return}return}if(!t.__om_eval)return;const a=t;const u=(s)=>{e.source.postMessage({...s,__om_eval_r:1,id:a.id},e.origin)};try{const s=(0,eval)(a.code);if(s&&typeof s.then==="function"){s.then((S)=>u({ok:1,v:O(S)}),(S)=>u({ok:0,e:String(S)}))}else{u({ok:1,v:O(s)})}}catch(s){u({ok:0,e:String(s)})}})}})();
+</script>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkilLearn</title>
+<link rel="icon" type="image/png" href="design/archway-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FFFFFF;--bg-raised:#FAFAFB;--bg-sunken:#F3F3F5;--border:#DDDDE3;--border-strong:#C4C5CC;--fg:#0F1C32;--fg-body:#43444B;--fg-muted:#62636B;--fg-subtle:#8E8F98;--amber:#E97A2C;--cyan:#3FA9E0;--orange:#E97A2C;--lit:#9CAD5E;--inc:#C96A5E;--mint:#E09A62;--sans:'Sora',ui-sans-serif,system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--fg-body);background:#FBFBFC;font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden}
+a{color:var(--cyan)}a:hover{color:var(--amber)}
+#app{display:grid;grid-template-columns:60% 40%;grid-template-rows:auto 1fr;height:100vh}
+header{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:18px 32px;border-bottom:1px solid #E9E9EE;background:#FFF}
+header .logo{display:flex;align-items:center;gap:10px}
+header .logo b{font-family:'Space Grotesk',var(--sans);font-weight:500;font-size:18px;color:#0F1C32;letter-spacing:-.02em}
+header .logo b i{font-style:normal;font-weight:500;color:#5B6B78}
+header .badge{font-family:var(--mono);font-size:10.5px;color:var(--fg-muted);border:1px solid var(--border);border-radius:4px;padding:2px 8px;letter-spacing:.08em}
+header .sub{font-family:var(--mono);font-size:10.5px;color:#A0A2AC;letter-spacing:.04em}
+#replay{margin-left:auto;font-family:var(--sans);font-weight:500;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#0F1C32;background:transparent;border:1px solid #C4C5CC;border-radius:3px;padding:8px 18px;cursor:pointer;transition:all .15s}
+#replay:hover{border-color:#0F1C32;background:#0F1C32;color:#FFF}
+#replay:disabled{opacity:.5;cursor:default}
+#scatter-wrap{position:relative;padding:8px 4px 10px 12px}
+#scatter{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#scatter.panning{cursor:grabbing}
+.node .inner{transition:transform .18s cubic-bezier(.22,.61,.36,1)}
+.node:hover .inner{transform:scale(1.3)}
+.plot-title{font-family:var(--sans);font-weight:300;font-size:17px;fill:#0F1C32;letter-spacing:-.01em}
+.plot-sub{font-family:var(--mono);font-size:9.5px;fill:#A0A2AC;letter-spacing:.06em}
+.spoke{stroke:#F0F0F3;stroke-width:1}
+.spoke-hi{stroke:#DDDDE3;stroke-width:1}
+.spoke-label{font-family:var(--mono);font-size:8.5px;fill:#A8A9B2;letter-spacing:.04em;paint-order:stroke;stroke:#FFF;stroke-width:3px;stroke-linejoin:round}
+.spoke-label.hi{fill:var(--fg-muted);font-size:9px}
+.orbit{fill:none;stroke:#F0F0F3;stroke-width:1;stroke-dasharray:1 4}
+.node{cursor:pointer}
+.node .ring{fill:none;stroke:var(--amber);stroke-width:1.2;stroke-dasharray:3 2.4;opacity:.55}
+.node .shape{stroke:#FFFFFF;stroke-width:1}
+.node.sel .shape{stroke:#0F1C32;stroke-width:1.6}
+.trail{fill:none;stroke-width:1.3;stroke-linecap:round;pointer-events:none}
+#legend-card{position:absolute;left:24px;bottom:20px;z-index:4;background:rgba(255,255,255,.92);border:1px solid #E9E9EE;border-radius:4px;padding:12px 15px;font-family:var(--mono);font-size:9.5px;line-height:1.9;color:#8E8F98;letter-spacing:.02em;white-space:nowrap}
+#legend-card b{color:#43444B;font-weight:500}
+#legend-card .sw{width:9px;height:9px;border-radius:50%;display:inline-block;margin:0 3px -1px 0}
+#tip{position:absolute;z-index:5;max-width:310px;background:var(--bg-raised);border:1px solid var(--border-strong);border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--fg-body);pointer-events:none;display:none;box-shadow:0 12px 32px -8px rgba(15,28,50,.12)}
+#tip .tid{font-family:var(--mono);font-size:10.5px;color:var(--fg-muted);margin-bottom:4px}
+#tip .dims{font-family:var(--mono);font-size:10px;color:var(--fg);margin-top:7px;line-height:1.7;border-top:1px solid var(--border);padding-top:5px}
+#tip .dims span{color:var(--fg-subtle)}
+#panels{display:flex;flex-direction:column;gap:14px;padding:16px 28px 20px 10px;overflow:hidden}
+.panel{min-height:0;background:#FFF;border:1px solid #E9E9EE;border-radius:4px;padding:16px 20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(15,28,50,.04)}
+#detail-panel{flex:1.25}#ledger-panel{flex:.75}#feed-panel{flex:1.15}
+.panel h2{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:#A0A2AC;margin-bottom:10px;display:flex;align-items:baseline;gap:12px}
+.panel h2 .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.02em;text-transform:none;color:var(--fg-subtle)}
+.pbody{flex:1;min-height:0;overflow-y:auto;font-size:13px;line-height:1.5}
+.pbody::-webkit-scrollbar{width:5px}.pbody::-webkit-scrollbar-thumb{background:#E0E1E6}
+#detail .rule-text{font-size:14px;line-height:1.6;color:#0F1C32;margin-bottom:10px;font-weight:300}
+#detail .meta{font-family:var(--mono);font-size:10.5px;color:var(--fg-subtle);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-bottom:8px}
+#detail .meta b{font-weight:500;color:var(--fg-body)}
+#emb-strip{display:flex;align-items:flex-end;gap:2px;height:44px;margin:4px 0 2px;padding:4px 4px 0;border-bottom:1px solid var(--border-strong)}
+#emb-strip i{flex:1;background:#C4C5CC;opacity:.9;min-height:2px;border-radius:1px 1px 0 0;transition:height .4s}
+#emb-strip i.named{background:var(--cyan)}
+#emb-caption{font-family:var(--mono);font-size:8.5px;color:var(--fg-subtle);display:flex;justify-content:space-between;margin-bottom:8px}
+#detail .cite{font-family:var(--mono);font-size:10.5px;color:var(--fg-muted);padding:3px 0;border-top:1px solid var(--border)}
+.badge2{display:inline-block;font-family:var(--mono);font-size:9.5px;padding:1px 7px;border:1px solid currentColor;border-radius:3px;margin-left:6px}
+.empty{color:var(--fg-subtle);font-size:12.5px;padding-top:6px}
+#feed .rec{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;padding:7px 0;border-bottom:1px solid #F0F0F3;font-family:var(--mono);font-size:10.5px;align-items:baseline}
+#feed .rec .t{color:var(--fg-subtle)}
+#feed .rec .r{color:var(--fg-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+#feed .rec .r:hover{color:var(--amber)}
+#feed .rec .detail-line{grid-column:2/4;color:var(--fg-subtle);font-size:9.5px}
+#feed .ev{font-weight:500;padding:0 6px;border:1px solid currentColor;border-radius:3px;font-size:9.5px;white-space:nowrap}
+.ev.mint{color:var(--mint)}.ev.pass{color:var(--lit)}.ev.fail{color:var(--inc)}.ev.revoke{color:var(--fg-muted)}.ev.deviation{color:var(--cyan)}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<span class="logo"><svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="11" fill="none" stroke="#D6D8DE" stroke-width="1.5"></circle><circle cx="14" cy="14" r="5.5" fill="#0F1C32"></circle><circle cx="22" cy="6.8" r="3" fill="#E97A2C"></circle></svg><b>Skil<i>Learn</i></b></span>
+<span class="sub">skill-rule registry · 8-d evidence vectors · motion = new evidence only</span>
+<button id="replay">▸ Replay day</button>
+</header>
+<div id="scatter-wrap">
+<svg id="scatter"></svg>
+<div id="legend-card">
+<b>How to read</b><br>
+<b>position</b> where the rule's evidence sits (8 measures → 2-d)<br>
+<b>size</b> times consulted &nbsp;·&nbsp; <b>dashed ring</b> currently trusted<br>
+<b>color</b> origin: <span class="sw" style="background:var(--lit)"></span>literature &nbsp;<span class="sw" style="background:var(--inc)"></span>incident &nbsp;<span class="sw" style="background:var(--mint)"></span>live-minted
+</div>
+<div id="tip"></div>
+</div>
+<div id="panels">
+<div class="panel" id="detail-panel"><h2>Selected rule <span class="tag" id="detail-id"></span></h2><div class="pbody" id="detail"><div class="empty">Select a node.</div></div></div>
+<div class="panel" id="ledger-panel"><h2>Version ledger <span class="tag">revocations = knots</span></h2><div class="pbody" id="ledger"><div class="empty">No rule selected.</div></div></div>
+<div class="panel" id="feed-panel"><h2>Decision records <span class="tag">policy: heuristic v0 · learning begins when decisions accrue</span></h2><div class="pbody" id="feed"></div></div>
+</div>
+</div>
+<script>
+let _s=42;function rnd(){_s=(_s*1664525+1013904223)>>>0;return _s/4294967296}
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+const SKILLS=["retrieval","tool-routing","citation","sandboxing","planning","memory","escalation","formatting"];
+const TEXTS=[
+"Prefer exercised retrieval paths over cold index scans when the query names a known entity.",
+"Never emit a tool call inside a quoted user string; re-tokenize the span first.",
+"Cite the narrowest span that supports the claim; widen only when sentences are interdependent.",
+"On timeout, retry once with halved context before escalating to raw-tool.",
+"Mint a new rule rather than amending when the failure mode is novel to the skill.",
+"Treat empty tool results as evidence of absence only after a scoped re-query.",
+"Batch reads for sibling files; serial reads waste the turn budget.",
+"Do not trust version counts from unregistered workstreams.",
+"Quarantine rules with unresolved citation drift until re-exercised.",
+"Route ambiguous intents to the amend path when retrieval score falls in [0.42, 0.55].",
+"Collapse duplicate mints within a session; keep the higher-scoring exemplar.",
+"Escalate to human review when two trusted rules conflict on the same span.",
+"Prefer incident-provenance rules over literature when both match above 0.6.",
+"Hash the exercised context, not the template, when recording exercised_hash.",
+"Downweight rules older than three revocation cycles on the same skill.",
+"Never amend a trusted rule from a live-minted parent without a fresh exercise pass.",
+"Segment long transcripts at speaker turns before projection, not at token counts.",
+"Reject retrieval hits whose citation targets have been garbage-collected.",
+"Log the raw-tool fallback reason verbatim; paraphrase loses the failure signature.",
+"Freeze the projection axes during an active incident window."
+];
+const CIT_SRC=["arXiv:2410.0","incident/INC-2","session/s-8","paper/skl-9","postmortem/PM-1","trace/tr-4"];
+function mkHash(){let h="";for(let i=0;i<8;i++)h+="0123456789abcdef"[Math.floor(rnd()*16)];return h}
+const PCOL={literature:"#9CAD5E",incident:"#C96A5E","live-minted":"#E09A62"};
+const D=8;
+const DIMS=["relevance","pass_rate","specificity","recency","coverage","risk","novelty","stability"];
+const U=[],V=[],T=[];
+for(let i=0;i<D;i++){U.push((rnd()-.5)*.5);V.push((rnd()-.5)*.5);T.push((rnd()-.5)*.5);}
+U[0]=1;U[2]=.55;U[4]=.4;V[1]=1;V[7]=.5;V[3]=.35;T[4]=1;T[6]=.6;T[2]=.4;
+function norm(a){const m=Math.hypot(...a);return a.map(x=>x/m)}
+const Un=norm(U),Vn=norm(V),Tn=norm(T);
+function proj3(emb){let x=0,y=0,z=0;for(let i=0;i<D;i++){const v=emb[i];if(v===null||v===undefined)continue;x+=v*Un[i];y+=v*Vn[i];z+=v*Tn[i];}return[x,y,z]}
+let yaw=.5,pitch=.3;
+function rot3(x,y,z){
+const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+const x1=x*cy+z*sy,z1=-x*sy+z*cy;
+const y1=y*cp-z1*sp,z2=y*sp+z1*cp;
+return[x1,y1,z2]}
+function mkEmb(prov){
+const e=[];for(let i=0;i<D;i++)e.push(rnd()*.6+.2);
+if(prov==="literature"){e[0]=.5+rnd()*.35;e[1]=.55+rnd()*.3;e[7]=.6+rnd()*.3}
+else if(prov==="incident"){e[0]=.4+rnd()*.4;e[1]=.35+rnd()*.45;e[5]=.55+rnd()*.35}
+else{e[0]=.25+rnd()*.35;e[1]=.3+rnd()*.4;e[6]=.6+rnd()*.35;e[3]=.7+rnd()*.25}
+return e}
+function mkRule(i,prov){
+const cits=[];const nc=1+Math.floor(rnd()*3);for(let k=0;k<nc;k++)cits.push(pick(CIT_SRC)+Math.floor(rnd()*90+10));
+return{rule_id:"R-"+String(1000+i),skill:SKILLS[i%SKILLS.length],text:pick(TEXTS),provenance:prov,
+version:1+Math.floor(rnd()*rnd()*6),citations:cits,exercised_hash:mkHash()+mkHash().slice(0,4),
+emb:mkEmb(prov),consults:2+Math.floor(rnd()*26),
+trusted:rnd()<(prov==="literature"?.55:prov==="incident"?.4:.15),
+revoked_at:null};}
+let RULES=[];let LIVE_DATA=null;
+try{const xhr=new XMLHttpRequest();xhr.open("GET","data/skillearn.json",false);xhr.send(null);
+if(xhr.status===200||xhr.status===0)LIVE_DATA=JSON.parse(xhr.responseText);}catch(e){LIVE_DATA=null}
+if(LIVE_DATA&&LIVE_DATA.rules&&LIVE_DATA.rules.length){
+  RULES=LIVE_DATA.rules.map(function(r){return{
+    rule_id:r.rule_id,skill:r.skill,text:r.text,
+    provenance:r.provenance==="research"?"literature":r.provenance,
+    version:r.version,citations:r.citations||[],exercised_hash:r.exercised_hash||"",
+    emb:r.emb,consults:r.consults,trusted:!!r.trusted,revoked_at:null};});
+}else{
+  for(let i=0;i<54;i++)RULES.push(mkRule(i,rnd()<.4?"literature":rnd()<.58?"incident":"live-minted"));
+}
+const SNAPSHOT=JSON.parse(JSON.stringify(RULES));
+const CEN=[0,0,0];
+RULES.forEach(r=>{const p=proj3(r.emb);CEN[0]+=p[0];CEN[1]+=p[1];CEN[2]+=p[2]});
+CEN[0]/=RULES.length;CEN[1]/=RULES.length;CEN[2]/=RULES.length;
+let RMAX=0;RULES.forEach(r=>{const p=proj3(r.emb);RMAX=Math.max(RMAX,Math.hypot(p[0]-CEN[0],p[1]-CEN[1],p[2]-CEN[2]))});
+RMAX*=1.12;
+const EVENTS=[];let ec=9*3600;
+if(LIVE_DATA&&LIVE_DATA.events&&LIVE_DATA.events.length){
+  const t0=Date.parse(LIVE_DATA.events[0].t)/1000;
+  LIVE_DATA.events.forEach(function(e){
+    if(e.idx===null||e.idx===undefined)return;
+    EVENTS.push({t:Math.round(Date.parse(e.t)/1000-t0)+9*3600,type:e.type,idx:e.idx,
+                 score:e.score===null||e.score===undefined?undefined:String(e.score)});});
+}else{
+for(let i=0;i<96;i++){
+ec+=120+Math.floor(rnd()*420);
+const roll=rnd();
+if(roll<.055&&EVENTS.filter(e=>e.type==="mint").length<6)EVENTS.push({t:ec,type:"mint",score:(.3+rnd()*.3).toFixed(2)});
+else if(roll<.09)EVENTS.push({t:ec,type:"revoke",idx:Math.floor(rnd()*54)});
+else if(roll<.17)EVENTS.push({t:ec,type:"deviation",idx:Math.floor(rnd()*54),score:(.1+rnd()*.3).toFixed(2)});
+else{EVENTS.push({t:ec,type:rnd()<.62?"pass":"fail",idx:Math.floor(rnd()*54),score:(.35+rnd()*.6).toFixed(2)});}}
+}
+function bump(e,i,d){e[i]=Math.min(.99,Math.max(.01,e[i]+d))}
+function applyEvent(ev){
+let r;
+if(ev.type==="mint"){
+if(ev.idx!==null&&ev.idx!==undefined&&RULES[ev.idx])return RULES[ev.idx];
+if(LIVE_DATA)return null;
+const i=RULES.length;r=mkRule(i,"live-minted");
+r.version=1;r.consults=1;r.trusted=false;r.emb[0]=parseFloat(ev.score);
+RULES.push(r);ev.idx=i;return r;}
+r=RULES[ev.idx];if(!r)return null;
+const e=r.emb,s=parseFloat(ev.score||0);
+if(ev.type==="pass"){r.consults++;bump(e,0,(s-e[0])*.25);bump(e,1,(1-e[1])*.12);bump(e,3,.12);bump(e,7,.05);}
+else if(ev.type==="fail"){r.consults++;bump(e,0,(s-e[0])*.25);bump(e,1,-e[1]*.15);bump(e,3,.12);bump(e,7,-.08);bump(e,5,.07);}
+else if(ev.type==="revoke"){if(!r.trusted)return null;r.trusted=false;r.revoked_at=r.version;bump(e,7,-.15);bump(e,5,.1);}
+else if(ev.type==="deviation"){bump(e,0,-.04);bump(e,6,.06);}
+return r;}
+const svg=document.getElementById("scatter"),wrap=document.getElementById("scatter-wrap"),tip=document.getElementById("tip");
+let selected=null,W=0,H=0;const PAD={l:36,r:60,t:64,b:96};
+const NS="http://www.w3.org/2000/svg";
+const gStatic=document.createElementNS(NS,"g"),gTrails=document.createElementNS(NS,"g"),gNodes=document.createElementNS(NS,"g"),gZoom=document.createElementNS(NS,"g"),gHud=document.createElementNS(NS,"g"),gAxes=document.createElementNS(NS,"g");
+gZoom.append(gStatic,gAxes,gTrails,gNodes);svg.append(gZoom,gHud);
+const view={k:1,tx:0,ty:0};
+function applyView(){gZoom.setAttribute("transform",`translate(${view.tx.toFixed(1)} ${view.ty.toFixed(1)}) scale(${view.k.toFixed(3)})`)}
+function toScreen(x,y){return[x*view.k+view.tx,y*view.k+view.ty]}
+let CX,CY,R,RX,RY;
+function pos(r){const p=proj3(r.emb);const[x,y]=rot3(p[0]-CEN[0],p[1]-CEN[1],p[2]-CEN[2]);const d=Math.hypot(x,y)||.001;const f=Math.pow(Math.min(d/RMAX,1),.55);return[CX+x/d*f*RX,CY-y/d*f*RY]}
+function buildStatic(){
+W=wrap.clientWidth-16;H=wrap.clientHeight-18;
+svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+CX=(PAD.l+W-PAD.r)/2;CY=(PAD.t+H-PAD.b)/2;
+R=Math.min(W-PAD.l-PAD.r,H-PAD.t-PAD.b)/2;
+RX=(W-PAD.l-PAD.r)/2;RY=(H-PAD.t-PAD.b)/2;
+gHud.innerHTML=`<text class="plot-title" x="${PAD.l}" y="24">Evidence space</text><text class="plot-sub" x="${PAD.l}" y="38">every dot is one learned rule · it moves only when new evidence arrives</text><text class="plot-sub" x="${PAD.l}" y="52">drag to rotate · shift-drag pan · scroll zoom · dbl-click reset</text>`;
+let s="";
+[.35,.65,.95].forEach(f=>{s+=`<circle class="orbit" cx="${CX}" cy="${CY}" r="${R*f}"></circle>`});
+gStatic.innerHTML=s;
+drawAxes();}
+function drawAxes(){
+let s="";const placed=[];
+for(let i=0;i<D;i++){
+const[ax,ay,az]=rot3(Un[i],Vn[i],Tn[i]);
+const m=Math.hypot(ax,ay)||.001;
+const len=R*(.22+m*.8);
+const x2=CX+ax/m*len*(RX/R),y2=CY-ay/m*len*(RY/R);
+const back=az<0;
+s+=`<line class="spoke-hi" x1="${CX}" y1="${CY}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" opacity="${back?'.4':'1'}"></line>`;
+let lxp=Math.min(Math.max(CX+ax/m*(len+13)*(RX/R),34),W-38),lyp=Math.min(Math.max(CY-ay/m*(len+13)*(RY/R),64),H-10);
+for(const q of placed){if(Math.abs(q[0]-lxp)<52&&Math.abs(q[1]-lyp)<11){lyp=q[1]+12;}}
+placed.push([lxp,lyp]);
+s+=`<text class="spoke-label hi" x="${lxp.toFixed(1)}" y="${lyp.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" opacity="${back?'.5':'1'}">${DIMS[i]}</text>`;}
+gAxes.innerHTML=s;}
+function updatePositions(){RULES.forEach(r=>{if(!r._el)return;[r.dx,r.dy]=pos(r);r._el.setAttribute("transform",`translate(${r.dx.toFixed(1)} ${r.dy.toFixed(1)})`)})}
+function nodeRad(r){return r.consults?4+Math.sqrt(r.consults)*1.6:4}
+function topDims(r,n){return r.emb.map((v,i)=>[DIMS[i],v]).filter(d=>d[1]!==null&&d[1]!==undefined).sort((a,b)=>b[1]-a[1]).slice(0,n)}
+function mkNodeEl(r,i){
+const g=document.createElementNS(NS,"g");g.setAttribute("class","node");g.dataset.i=i;
+const rad=nodeRad(r);
+g.innerHTML=`<g class="inner"><circle class="pulse" r="${rad+6}" fill="${PCOL[r.provenance]}" opacity="0"></circle><circle class="shape" r="${rad}" fill="${PCOL[r.provenance]}" fill-opacity=".95"></circle><circle class="ring" r="${rad+4}" style="display:${r.trusted?'':'none'}"></circle></g>`;
+[r.dx,r.dy]=pos(r);
+g.setAttribute("transform",`translate(${r.dx} ${r.dy})`);
+g.addEventListener("mouseenter",()=>{
+const td=topDims(r,4).map(d=>`<span>${d[0]}</span> ${d[1].toFixed(2)}`).join(" &nbsp;");
+tip.innerHTML=`<div class="tid">${r.rule_id} · ${r.skill} · v${r.version} · consulted ${r.consults}&times;</div>${r.text}<div class="dims">strongest dims: ${td}</div>`;
+tip.style.display="block";
+const[sx,sy]=toScreen(r.dx,r.dy);
+let tx=sx+20,ty=sy;
+if(tx>wrap.clientWidth-330)tx-=350;if(ty>wrap.clientHeight-150)ty-=120;
+tip.style.left=tx+"px";tip.style.top=ty+"px";});
+g.addEventListener("mouseleave",()=>tip.style.display="none");
+g.addEventListener("click",()=>{select(i);zoomToNode(r);});
+r._el=g;gNodes.appendChild(g);return g;}
+function buildNodes(){gNodes.innerHTML="";RULES.forEach((r,i)=>mkNodeEl(r,i));if(selected!==null)markSel();}
+function markSel(){gNodes.querySelectorAll(".node").forEach(n=>n.classList.toggle("sel",+n.dataset.i===selected));}
+function select(i){selected=i;markSel();const r=RULES[i];
+document.getElementById("detail-id").textContent=r.rule_id;renderDetail(r);drawLedger(r);}
+// ---- pan / zoom / focus ----
+let viewTween=null;
+function tweenView(target,dur){
+const from={...view},t0=performance.now();cancelAnimationFrame(viewTween);
+const stepV=now=>{const t=Math.min(1,(now-t0)/dur),e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+view.k=from.k+(target.k-from.k)*e;view.tx=from.tx+(target.tx-from.tx)*e;view.ty=from.ty+(target.ty-from.ty)*e;
+applyView();if(t<1)viewTween=requestAnimationFrame(stepV);};
+viewTween=requestAnimationFrame(stepV);}
+function zoomToNode(r){
+const k=Math.max(view.k,1.7);
+tweenView({k,tx:W/2-r.dx*k,ty:H/2-r.dy*k},550);}
+function resetView(){tweenView({k:1,tx:0,ty:0},450);yaw=.5;pitch=.3;gTrails.innerHTML="";drawAxes();updatePositions();}
+svg.addEventListener("wheel",ev=>{
+ev.preventDefault();
+const rect=svg.getBoundingClientRect();
+const mx=(ev.clientX-rect.left)*W/rect.width,my=(ev.clientY-rect.top)*H/rect.height;
+const k2=Math.min(5,Math.max(.5,view.k*Math.pow(1.0015,-ev.deltaY)));
+view.tx=mx-(mx-view.tx)*(k2/view.k);view.ty=my-(my-view.ty)*(k2/view.k);view.k=k2;
+cancelAnimationFrame(viewTween);applyView();},{passive:false});
+let panning=false,pLast=null;
+svg.addEventListener("pointerdown",ev=>{
+if(ev.target.closest(".node"))return;
+panning=true;pLast=[ev.clientX,ev.clientY];svg.classList.add("panning");svg.setPointerCapture(ev.pointerId);});
+svg.addEventListener("pointermove",ev=>{
+if(!panning)return;
+const rect=svg.getBoundingClientRect(),sc=W/rect.width;
+if(ev.shiftKey){view.tx+=(ev.clientX-pLast[0])*sc;view.ty+=(ev.clientY-pLast[1])*sc;applyView();}
+else{yaw+=(ev.clientX-pLast[0])*.006;pitch=Math.min(1.4,Math.max(-1.4,pitch+(ev.clientY-pLast[1])*.006));gTrails.innerHTML="";drawAxes();updatePositions();}
+pLast=[ev.clientX,ev.clientY];cancelAnimationFrame(viewTween);});
+["pointerup","pointercancel"].forEach(t=>svg.addEventListener(t,()=>{panning=false;svg.classList.remove("panning")}));
+svg.addEventListener("dblclick",ev=>{if(!ev.target.closest(".node"))resetView()});
+function renderDetail(r){
+const bars=r.emb.map((v,i)=>v===null||v===undefined?`<i class="${i<8?'named':''}" style="height:100%;opacity:.08" title="${DIMS[i]} \u00b7 unobserved (no data source in this repository)"></i>`:`<i class="${i<8?'named':''}" style="height:${(v*100).toFixed(0)}%" title="${DIMS[i]} ${v.toFixed(2)}"></i>`).join("");
+document.getElementById("detail").innerHTML=
+`<div class="rule-text">&ldquo;${r.text}&rdquo;<span class="badge2" style="color:${PCOL[r.provenance]}">${r.provenance}</span>${r.trusted?'<span class="badge2" style="color:var(--amber)">trusted</span>':''}</div>
+<div id="emb-strip">${bars}</div>
+<div id="emb-caption"><span>evidence vector \u00b7 ${r.emb.filter(v=>v!==null&&v!==undefined).length} of 8 observed</span><span>faint = no observation</span></div>
+<div class="meta"><span>consulted</span><b>${r.consults}&times;</b><span>version</span><b>v${r.version}</b><span>exercised_hash</span><b>${r.exercised_hash}</b></div>
+${r.citations.map(c=>`<div class="cite">↳ ${c}</div>`).join("")}`;}
+function drawLedger(r){
+const el=document.getElementById("ledger");
+const w=el.clientWidth-8,rowH=34,h=r.version*rowH+12;
+let s=`<svg viewBox="0 0 ${w} ${h}" height="${h}">`;
+for(let v=1;v<=r.version;v++){
+const y=8+(v-1)*rowH+rowH/2;
+s+=`<line x1="8" y1="${y+2}" x2="${w-8}" y2="${y+2}" stroke="#DDDDE3" stroke-width="1"></line>`;
+if(r.revoked_at===v){const kx=w*.55;
+s+=`<circle cx="${kx}" cy="${y+2}" r="6" fill="#EAEAEE" stroke="#8E8F98" stroke-width="1"></circle><circle cx="${kx}" cy="${y+2}" r="2.2" fill="#C96A5E"></circle><text x="${kx+14}" y="${y+5}" font-family="JetBrains Mono" font-size="9" fill="#C96A5E">trust revoked</text>`;}
+s+=`<circle cx="26" cy="${y+2}" r="3.6" fill="${v===r.version?PCOL[r.provenance]:'#C4C5CC'}"></circle><text x="38" y="${y+5}" font-family="JetBrains Mono" font-size="10" fill="#43444B">v${v}</text><text x="${w-10}" y="${y+5}" text-anchor="end" font-family="JetBrains Mono" font-size="8.5" fill="#8E8F98">${mkHash()}</text>`;}
+el.innerHTML=s+"</svg>";}
+const tweens=[];let rafActive=false;
+function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+function animateEvent(r){
+if(!r._el)return;
+const x0=r.dx,y0=r.dy,[x1,y1]=pos(r);
+let trail=null;
+if(Math.abs(x1-x0)>1||Math.abs(y1-y0)>1){
+trail=document.createElementNS(NS,"path");
+trail.setAttribute("class","trail");trail.setAttribute("stroke",PCOL[r.provenance]);
+trail.setAttribute("d",`M ${x0.toFixed(1)} ${y0.toFixed(1)} L ${x1.toFixed(1)} ${y1.toFixed(1)}`);
+gTrails.appendChild(trail);}
+tweens.push({r,x0,y0,x1,y1,start:performance.now(),trail});
+if(!rafActive){rafActive=true;requestAnimationFrame(tick);}}
+function tick(now){
+for(let i=tweens.length-1;i>=0;i--){
+const tw=tweens[i],t=Math.min(1,(now-tw.start)/800);
+const e=ease(t);
+tw.r.dx=tw.x0+(tw.x1-tw.x0)*e;tw.r.dy=tw.y0+(tw.y1-tw.y0)*e;
+tw.r._el.setAttribute("transform",`translate(${tw.r.dx.toFixed(1)} ${tw.r.dy.toFixed(1)})`);
+const pulse=tw.r._el.querySelector(".pulse");
+pulse.setAttribute("opacity",(Math.sin(Math.min(t*1.4,1)*Math.PI)*.4).toFixed(3));
+if(t===1){
+const rad=nodeRad(tw.r);
+tw.r._el.querySelector(".shape").setAttribute("r",rad);
+const ring=tw.r._el.querySelector(".ring");ring.setAttribute("r",rad+4);ring.style.display=tw.r.trusted?"":"none";
+pulse.setAttribute("opacity",0);
+if(tw.trail){const tr=tw.trail;let op=.5;
+const fade=()=>{op-=.02;if(op<=0){tr.remove();return}tr.setAttribute("stroke-opacity",op.toFixed(2));requestAnimationFrame(fade)};fade();}
+tweens.splice(i,1);}}
+if(tweens.length){requestAnimationFrame(tick)}else{rafActive=false}}
+const feed=document.getElementById("feed");
+const EVLBL={mint:"mint",pass:"exercise · pass",fail:"exercise · fail",revoke:"trust revoked",deviation:"deviation logged"};
+function fmtT(sec){const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.floor(sec%60);return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
+function feedRow(ev,r){
+const div=document.createElement("div");div.className="rec";
+const extra=ev.type==="mint"?`minted at score ${ev.score}`:ev.type==="revoke"?`ring removed · v${r.version}`:ev.type==="deviation"?`agent deviated · score ${ev.score}`:`retrieval score ${ev.score} → pass_rate ${r.emb[1]===null||r.emb[1]===undefined?"unobserved":r.emb[1].toFixed(2)}`;
+div.innerHTML=`<span class="t">${fmtT(ev.t)}</span><span class="r">${r.rule_id} · ${r.skill}</span><span class="ev ${ev.type}">${EVLBL[ev.type]}</span><span class="detail-line">${extra}</span>`;
+div.querySelector(".r").addEventListener("click",()=>select(RULES.indexOf(r)));
+feed.prepend(div);while(feed.children.length>22)feed.lastChild.remove();}
+let cursor=0;const LIVE_START=64;
+function processEvent(animate){
+if(cursor>=EVENTS.length)return false;
+const ev=EVENTS[cursor++];
+const isNew=ev.type==="mint";
+const r=applyEvent(ev);
+if(!r)return true;
+if(isNew)mkNodeEl(r,RULES.length-1);
+if(animate){animateEvent(r);feedRow(ev,r);
+if(selected!==null&&RULES[selected]===r){renderDetail(r);drawLedger(r);}}
+else{[r.dx,r.dy]=pos(r);
+if(r._el){r._el.setAttribute("transform",`translate(${r.dx} ${r.dy})`);
+const rad=nodeRad(r);r._el.querySelector(".shape").setAttribute("r",rad);
+const ring=r._el.querySelector(".ring");ring.setAttribute("r",rad+4);ring.style.display=r.trusted?"":"none";}
+feedRow(ev,r);}
+return true;}
+let liveTimer=null;
+function startLive(){clearInterval(liveTimer);liveTimer=setInterval(()=>{if(!processEvent(true))clearInterval(liveTimer)},5200);}
+function resetToSnapshot(){
+RULES=JSON.parse(JSON.stringify(SNAPSHOT));cursor=0;selected=null;
+feed.innerHTML="";gTrails.innerHTML="";tweens.length=0;
+document.getElementById("detail").innerHTML='<div class="empty">Select a node.</div>';
+document.getElementById("detail-id").textContent="";
+document.getElementById("ledger").innerHTML='<div class="empty">No rule selected.</div>';
+buildNodes();}
+const replayBtn=document.getElementById("replay");
+replayBtn.addEventListener("click",()=>{
+clearInterval(liveTimer);replayBtn.disabled=true;replayBtn.textContent="▸ Replaying…";
+resetToSnapshot();
+const stepReplay=()=>{
+if(!processEvent(true)){replayBtn.disabled=false;replayBtn.textContent="▸ Replay day";startLive();return}
+setTimeout(stepReplay,340);};
+setTimeout(stepReplay,400);});
+buildStatic();buildNodes();
+while(cursor<LIVE_START)processEvent(false);
+select(RULES.findIndex(r=>r.trusted&&r.version>2)>=0?RULES.findIndex(r=>r.trusted&&r.version>2):0);
+startLive();
+window.addEventListener("resize",()=>{buildStatic();buildNodes();gTrails.innerHTML="";view.k=1;view.tx=0;view.ty=0;applyView()});
+</script>
+</body>
+</html>
