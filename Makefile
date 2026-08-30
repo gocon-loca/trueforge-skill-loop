@@ -2,7 +2,7 @@
 # every target then picks it up automatically. Override with PYTHON=... if you prefer.
 VENV ?= .venv
 PYTHON ?= $(shell [ -x $(VENV)/bin/python ] && echo $(VENV)/bin/python || echo python3)
-.PHONY: deps demo map check-versions retrieve decide ui-data trueforge-skills verify-skill fixture scrape exercise serve test clean
+.PHONY: deps demo map check-versions retrieve decide ui-data ui-serve trueforge-skills verify-skill fixture scrape exercise serve test clean
 
 # The orchestrator needs PyYAML. The pipeline does not need anything.
 deps:
@@ -77,3 +77,11 @@ decide:
 # Regenerate the dashboard data: backfill the event log, then snapshot evidence.
 ui-data:
 	$(PYTHON) -m orchestrator.ui_data
+
+# Serve the dashboard. It reads ui/data/*.json over HTTP, so opening index.html
+# from the filesystem gives you the built-in mock instead of the registry.
+ui-serve: ui-data
+	@echo "dashboard on http://localhost:$(UI_PORT)  (ctrl-c to stop)"
+	@$(PYTHON) -m http.server $(UI_PORT) --directory ui
+
+UI_PORT ?= 8902

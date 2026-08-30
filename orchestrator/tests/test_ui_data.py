@@ -121,3 +121,35 @@ class EvidenceSnapshotTests(unittest.TestCase):
         out = Path(self._tmp.name) / "evidence.json"
         ui_data.write("registry", out, self.events)
         json.loads(out.read_text())
+
+
+class CoverageDiscriminatesTests(unittest.TestCase):
+    """Coverage must measure the skill, not the number of lookups that were run."""
+
+    def test_raw_consult_count_is_identical_across_skills(self):
+        """The defect this guards. Retrieval scores every skill on every query, so a raw
+        consultation count says how many lookups ran and nothing about any skill."""
+        data = ui_data.build_skillearn()
+        per_skill = {r["skill"]: r["consults"] for r in data["rules"]}
+        if len(per_skill) > 1 and all(per_skill.values()):
+            self.assertEqual(
+                len(set(per_skill.values())), 1,
+                "if raw consult counts ever differ across skills, retrieval stopped scoring "
+                "every candidate and coverage's rationale needs revisiting",
+            )
+
+    def test_coverage_is_not_pinned_to_one_for_every_skill(self):
+        data = ui_data.build_skillearn()
+        cov = {r["skill"]: r["emb"][ui_data.DIMS.index("coverage")] for r in data["rules"]}
+        observed = [v for v in cov.values() if v is not None]
+        if len(observed) > 1:
+            self.assertGreater(
+                len(set(observed)), 1,
+                "coverage carries no information if every skill scores the same; it must read "
+                "rank-1 selections, not consultations",
+            )
+
+    def test_a_skill_never_ranked_first_has_null_coverage_not_zero(self):
+        rule = {"selected": None, "x": 0.5, "y": 1.0, "size": 40}
+        emb = ui_data._embedding(rule, busiest=10)
+        self.assertIsNone(emb[ui_data.DIMS.index("coverage")])
